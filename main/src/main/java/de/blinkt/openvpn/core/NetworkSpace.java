@@ -319,6 +319,12 @@ public class NetworkSpace {
                         }
                         // Keep currentNet as is
                     }
+                } else if (currentNet.getFirstAddress().equals(nextNet.getFirstAddress())) {
+                    // Same first address but currentNet is bigger (lower mask).
+                    // Swap: make the smaller network (nextNet) the current, put the bigger one back.
+                    // Next iteration will handle them via the first branch above.
+                    networks.add(currentNet);
+                    currentNet = nextNet;
                 } else {
                     if (BuildConfig.DEBUG) {
                         assertTrue(currentNet.networkMask < nextNet.networkMask);

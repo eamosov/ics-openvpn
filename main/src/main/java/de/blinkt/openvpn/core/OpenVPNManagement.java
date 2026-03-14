@@ -14,6 +14,7 @@ public interface OpenVPNManagement {
         noNetwork,
         userPause,
         screenOff,
+        trustedWifi,
     }
 
     enum SignaturePadding {

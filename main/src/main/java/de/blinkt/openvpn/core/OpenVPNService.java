@@ -120,6 +120,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private boolean mStarting = false;
     private long mConnecttime;
     private OpenVPNManagement mManagement;
+    private SingBoxProcess mSingBoxProcess;
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
 
         @Override
@@ -239,11 +240,13 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         final OpenVPNManagement managment = mManagement;
         mCommandHandler.post(() -> managment.stopVPN(false));
 
+        stopSingBox();
         endVpnService();
     }
 
     // Similar to revoke but do not try to stop process
     public void openvpnStopped() {
+        stopSingBox();
         endVpnService();
     }
 
@@ -483,12 +486,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         newDeviceStateReceiver.networkStateChange(this);
 
         registerReceiver(newDeviceStateReceiver, filter);
+        // WiFi callback is registered earlier in startOpenVPN() before VPN thread starts
         VpnStatus.addByteCountListener(newDeviceStateReceiver);
     }
 
     synchronized void unregisterDeviceStateReceiver(DeviceStateReceiver deviceStateReceiver) {
         if (mDeviceStateReceiver != null)
             try {
+                deviceStateReceiver.unregisterWifiCallback();
                 VpnStatus.removeByteCountListener(deviceStateReceiver);
                 this.unregisterReceiver(deviceStateReceiver);
             } catch (IllegalArgumentException iae) {
@@ -697,6 +702,20 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         // An old running VPN should now be exited
         mStarting = false;
 
+        // Start sing-box tunnel if enabled for any active connection
+        mProfile.mSingBoxLocalPort = -1;
+        Connection singBoxConn = findSingBoxConnection(mProfile);
+        if (singBoxConn != null) {
+            mSingBoxProcess = new SingBoxProcess();
+            int localPort = mSingBoxProcess.start(this, singBoxConn);
+            if (localPort < 0) {
+                VpnStatus.logError("sing-box failed to start, aborting VPN");
+                endVpnService();
+                return;
+            }
+            mProfile.mSingBoxLocalPort = localPort;
+        }
+
         // Start a new session by creating a new thread.
         boolean useOpenVPN3 = VpnProfile.doUseOpenVPN3(this);
 
@@ -742,6 +761,10 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         final DeviceStateReceiver oldDeviceStateReceiver = mDeviceStateReceiver;
         final DeviceStateReceiver newDeviceStateReceiver = new DeviceStateReceiver(mManagement);
 
+        // Register WiFi callback early so SSID is available for trusted WiFi check
+        // before VPN thread calls isOnTrustedWifi()
+        newDeviceStateReceiver.registerWifiCallback(this);
+
         guiHandler.post(() -> {
             if (oldDeviceStateReceiver != null)
                 unregisterDeviceStateReceiver(oldDeviceStateReceiver);
@@ -768,6 +791,26 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         }
 
         forceStopOpenVpnProcess();
+        stopSingBox();
+    }
+
+    private Connection findSingBoxConnection(VpnProfile profile) {
+        if (profile.mConnections == null)
+            return null;
+        for (Connection conn : profile.mConnections) {
+            if (conn.mEnabled && conn.mSingBoxEnable)
+                return conn;
+        }
+        return null;
+    }
+
+    private void stopSingBox() {
+        if (mSingBoxProcess != null) {
+            mSingBoxProcess.stop();
+            mSingBoxProcess = null;
+        }
+        if (mProfile != null)
+            mProfile.mSingBoxLocalPort = -1;
     }
 
     public void forceStopOpenVpnProcess() {
@@ -813,9 +856,11 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     public void onDestroy() {
         synchronized (mProcessLock) {
             if (mProcessThread != null) {
-                mManagement.stopVPN(true);
+                mManagement.stopVPN(false);
             }
         }
+
+        stopSingBox();
 
         if (mDeviceStateReceiver != null) {
             unregisterDeviceStateReceiver(mDeviceStateReceiver);
@@ -1021,6 +1066,20 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         setHttpProxy(builder, tc);
 
         builder.setConfigureIntent(getGraphPendingIntent());
+
+        // Exclude route for sing-box VLESS server to prevent VPN loop
+        if (mSingBoxProcess != null && mSingBoxProcess.isRunning()) {
+            String serverIp = mSingBoxProcess.getRemoteServerIp();
+            if (serverIp != null) {
+                try {
+                    IpAddress singBoxRoute = new IpAddress(new CIDRIP(serverIp, 32), false);
+                    builder.excludeRoute(singBoxRoute.getPrefix());
+                    VpnStatus.logInfo("sing-box: excluded route for " + serverIp + "/32");
+                } catch (Exception e) {
+                    VpnStatus.logWarning("sing-box: failed to add exclude route: " + e.getMessage());
+                }
+            }
+        }
 
         try {
             //Debug.stopMethodTracing();

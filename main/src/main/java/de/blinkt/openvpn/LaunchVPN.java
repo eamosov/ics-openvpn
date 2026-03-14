@@ -93,7 +93,16 @@ public class LaunchVPN extends Activity {
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
+        android.util.Log.i("LaunchVPN", "onCreate");
         setContentView(R.layout.launchvpn);
+        startVpnFromIntent();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        android.util.Log.i("LaunchVPN", "onNewIntent");
+        setIntent(intent);
         startVpnFromIntent();
     }
 
@@ -127,9 +136,12 @@ public class LaunchVPN extends Activity {
 
         final Intent intent = getIntent();
         final String action = intent.getAction();
+        android.util.Log.i("LaunchVPN", "startVpnFromIntent: action=" + action);
 
         // If the intent is a request to create a shortcut, we'll do that and exit
         if (!Intent.ACTION_MAIN.equals(action)) {
+            android.util.Log.i("LaunchVPN", "action is not MAIN, returning. Activity will show progress bar forever!");
+            finish();
             return;
         }
 
@@ -239,6 +251,7 @@ public class LaunchVPN extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        android.util.Log.i("LaunchVPN", "onActivityResult: requestCode=" + requestCode + " resultCode=" + resultCode);
 
         if (requestCode == START_VPN_PROFILE) {
             if (resultCode == Activity.RESULT_OK) {
@@ -333,6 +346,7 @@ public class LaunchVPN extends Activity {
         }
 
         if (intent != null) {
+            android.util.Log.i("LaunchVPN", "VPN consent needed, launching system dialog");
             VpnStatus.updateStateString("USER_VPN_PERMISSION", "", R.string.state_user_vpn_permission,
                     ConnectionStatus.LEVEL_WAITING_FOR_USER_INPUT);
             // Start the query
@@ -345,6 +359,7 @@ public class LaunchVPN extends Activity {
                 showLogWindow();
             }
         } else {
+            android.util.Log.i("LaunchVPN", "VPN consent already granted, starting VPN");
             onActivityResult(START_VPN_PROFILE, Activity.RESULT_OK, null);
         }
 

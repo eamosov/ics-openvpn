@@ -47,7 +47,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDirs("src/main/assets", "build/ovpnassets")
-
+            jniLibs.srcDirs("${buildDir}/singbox/jniLibs")
         }
 
         create("ui") {
@@ -223,6 +223,68 @@ android.applicationVariants.all(object : Action<ApplicationVariant> {
         variant.registerJavaGeneratingTask(task, sourceDir)
     }
 })
+
+// sing-box build tasks
+val singboxSrcDir = file("src/main/go/sing-box")
+val singboxOutputDir = file("${buildDir}/singbox/jniLibs")
+
+data class SingBoxTarget(val goarch: String, val ccPrefix: String)
+val singboxTargets = mapOf(
+    "arm64-v8a"   to SingBoxTarget("arm64", "aarch64-linux-android21"),
+    "armeabi-v7a" to SingBoxTarget("arm",   "armv7a-linux-androideabi21"),
+    "x86_64"      to SingBoxTarget("amd64", "x86_64-linux-android21"),
+    "x86"         to SingBoxTarget("386",   "i686-linux-android21")
+)
+
+var gocmd = "go"
+if (file("/opt/homebrew/bin/go").exists())
+    gocmd = "/opt/homebrew/bin/go"
+else if (file("/usr/local/go/bin/go").exists())
+    gocmd = "/usr/local/go/bin/go"
+
+val ndkDir = android.ndkDirectory
+val ndkToolchainBin = File(ndkDir, "toolchains/llvm/prebuilt/darwin-x86_64/bin")
+
+singboxTargets.forEach { (abi, target) ->
+    tasks.register<Exec>("buildSingBox_${abi}") {
+        val outputDir = file("${singboxOutputDir}/${abi}")
+        val outputFile = file("${outputDir}/libsingbox.so")
+        val cc = File(ndkToolchainBin, "${target.ccPrefix}-clang")
+
+        workingDir = singboxSrcDir
+        environment("GOOS", "android")
+        environment("GOARCH", target.goarch)
+        environment("CGO_ENABLED", "1")
+        environment("CC", cc.absolutePath)
+        commandLine(gocmd, "build",
+            "-tags", "with_utls",
+            "-o", outputFile.absolutePath,
+            "-trimpath",
+            "-ldflags", "-s -w",
+            "./cmd/sing-box")
+
+        doFirst {
+            mkdir(outputDir)
+        }
+
+        inputs.files(file("${singboxSrcDir}/go.mod"), file("${singboxSrcDir}/go.sum"))
+        inputs.dir(file("${singboxSrcDir}/cmd"))
+        outputs.file(outputFile)
+    }
+}
+
+tasks.register("buildSingBox") {
+    description = "Build sing-box for all Android ABIs"
+    singboxTargets.keys.forEach { abi ->
+        dependsOn("buildSingBox_${abi}")
+    }
+}
+
+afterEvaluate {
+    tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
+        dependsOn("buildSingBox")
+    }
+}
 
 
 dependencies {

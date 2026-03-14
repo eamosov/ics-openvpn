@@ -93,17 +93,18 @@ public class RemoteAction extends Activity {
 
     private void performAction() throws RemoteException {
 
-        if (!mService.isAllowedExternalApp(getCallingPackage())) {
-            finish();
-            return;
-        }
-
         Intent intent = getIntent();
         setIntent(null);
         ComponentName component = intent.getComponent();
         if (component == null)
             return;
 
+        // DisconnectVPN is safe to call without permission check (just stops VPN)
+        boolean isDisconnect = ".api.DisconnectVPN".equals(component.getShortClassName());
+        if (!isDisconnect && !mService.isAllowedExternalApp(getCallingPackage())) {
+            finish();
+            return;
+        }
 
         switch (component.getShortClassName()) {
             case ".api.DisconnectVPN":

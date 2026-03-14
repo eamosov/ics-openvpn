@@ -27,6 +27,16 @@ public class Connection implements Serializable, Cloneable {
     public String mProxyAuthUser = null;
     public String mProxyAuthPassword = null;
 
+    // sing-box tunnel settings
+    public boolean mSingBoxEnable = false;
+    public String mSingBoxOverrideAddress = "";
+    public String mSingBoxOverridePort = "";     // empty = use port from remote
+    public String mSingBoxServerPort = "";        // empty = 443
+    public String mSingBoxUUID = "";
+    public String mSingBoxTlsServerName = "";
+    public String mSingBoxTlsPublicKey = "";
+    public String mSingBoxTlsShortId = "";
+
     public enum ProxyType {
         NONE,
         HTTP,
@@ -34,21 +44,34 @@ public class Connection implements Serializable, Cloneable {
         ORBOT
     }
 
-    private static final long serialVersionUID = 92031902903829089L;
+    private static final long serialVersionUID = 92031902903829090L;
 
 
     public String getConnectionBlock(boolean isOpenVPN3) {
+        return getConnectionBlock(isOpenVPN3, -1);
+    }
+
+    /**
+     * Generate connection block. If singBoxLocalPort > 0 and sing-box is enabled,
+     * override remote to 127.0.0.1:{singBoxLocalPort} tcp-client.
+     */
+    public String getConnectionBlock(boolean isOpenVPN3, int singBoxLocalPort) {
         String cfg = "";
 
         // Server Address
-        cfg += "remote ";
-        cfg += mServerName;
-        cfg += " ";
-        cfg += mServerPort;
-        if (mUseUdp)
-            cfg += " udp\n";
-        else
-            cfg += " tcp-client\n";
+        if (mSingBoxEnable && singBoxLocalPort > 0) {
+            // Override remote to sing-box local listener
+            cfg += "remote 127.0.0.1 " + singBoxLocalPort + " tcp-client\n";
+        } else {
+            cfg += "remote ";
+            cfg += mServerName;
+            cfg += " ";
+            cfg += mServerPort;
+            if (mUseUdp)
+                cfg += " udp\n";
+            else
+                cfg += " tcp-client\n";
+        }
 
         if (mConnectTimeout != 0)
             cfg += String.format(Locale.US, " connect-timeout  %d\n", mConnectTimeout);
@@ -85,6 +108,38 @@ public class Connection implements Serializable, Cloneable {
 
     public boolean isOnlyRemote() {
         return TextUtils.isEmpty(mCustomConfiguration) || !mUseCustomConfig;
+    }
+
+    /**
+     * Returns the effective override port for sing-box inbound.
+     * If sb_override_port is not set, uses the port from remote.
+     */
+    public int getSingBoxOverridePort() {
+        if (!TextUtils.isEmpty(mSingBoxOverridePort)) {
+            try {
+                return Integer.parseInt(mSingBoxOverridePort);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        try {
+            return Integer.parseInt(mServerPort);
+        } catch (NumberFormatException ignored) {
+            return 1194;
+        }
+    }
+
+    /**
+     * Returns the effective VLESS server port.
+     * If sb_server_port is not set, defaults to 443.
+     */
+    public int getSingBoxServerPort() {
+        if (!TextUtils.isEmpty(mSingBoxServerPort)) {
+            try {
+                return Integer.parseInt(mSingBoxServerPort);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 443;
     }
 
     public int getTimeout() {

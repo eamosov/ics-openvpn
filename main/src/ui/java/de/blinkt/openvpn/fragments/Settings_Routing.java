@@ -106,10 +106,24 @@ public class Settings_Routing extends OpenVpnPreferencesFragment implements Pref
 			Object newValue) {
 		if(	 preference == mCustomRoutes || preference == mCustomRoutesv6
                 || preference == mExcludedRoutes || preference == mExcludedRoutesv6)
-			preference.setSummary((String)newValue);
+			preference.setSummary(getNetworkCountSummary((String) newValue));
 
 		saveSettings();
 		return true;
+	}
+
+	private String getNetworkCountSummary(String routes) {
+		if (routes == null || routes.trim().isEmpty())
+			return getString(R.string.no_networks);
+		String[] parts = routes.trim().split("[\\s,;]+");
+		int count = 0;
+		for (String part : parts) {
+			if (!part.isEmpty())
+				count++;
+		}
+		if (count == 0)
+			return getString(R.string.no_networks);
+		return getResources().getQuantityString(R.plurals.network_count, count, count);
 	}
 
 

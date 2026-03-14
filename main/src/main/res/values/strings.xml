@@ -284,6 +284,32 @@
     <string name="resumevpn">Resume VPN</string>
     <string name="state_userpause">VPN pause requested by user</string>
     <string name="state_screenoff">VPN paused - screen off</string>
+    <string name="state_trustedwifi">VPN paused - trusted WiFi network</string>
+    <string name="trusted_wifi_pause">Pausing VPN - connected to trusted WiFi network</string>
+    <string name="trusted_wifi_resume">Resuming VPN - disconnected from trusted WiFi network</string>
+    <string name="status_tab">Status</string>
+    <string name="trusted_wifi_networks">Trusted WiFi Networks</string>
+    <string name="trusted_wifi_summary">VPN will be paused when connected to these WiFi networks</string>
+    <string name="add_trusted_wifi">Add WiFi network</string>
+    <string name="trusted_wifi_ssid_hint">WiFi network name (SSID)</string>
+    <string name="no_trusted_wifi">No trusted WiFi networks configured</string>
+    <string name="singbox_tab">Sing-Box</string>
+    <string name="singbox_enable">Enable sing-box tunnel</string>
+    <string name="singbox_summary">Route OpenVPN traffic through VLESS/Reality tunnel</string>
+    <string name="singbox_override_address">Override Address</string>
+    <string name="singbox_override_address_hint">Real OpenVPN server IP behind proxy</string>
+    <string name="singbox_override_port">Override Port</string>
+    <string name="singbox_override_port_hint">Default: port from remote</string>
+    <string name="singbox_server_port">VLESS Server Port</string>
+    <string name="singbox_server_port_hint">Default: 443</string>
+    <string name="singbox_uuid">UUID</string>
+    <string name="singbox_uuid_hint">VLESS UUID</string>
+    <string name="singbox_tls_server_name">TLS Server Name (SNI)</string>
+    <string name="singbox_tls_server_name_hint">e.g. www.example.com</string>
+    <string name="singbox_tls_public_key">Reality Public Key</string>
+    <string name="singbox_tls_public_key_hint">Reality public key</string>
+    <string name="singbox_tls_short_id">Reality Short ID</string>
+    <string name="singbox_tls_short_id_hint">Reality short ID</string>
     <string name="device_specific">Device specifics Hacks</string>
     <string name="cannotparsecert">Cannot display certificate information</string>
     <string name="appbehaviour">Application behaviour</string>
@@ -505,5 +531,10 @@
     <string name="cannot_start_vpn_not_configured">Cannot start VPN. No default VPN has been configured.</string>
     <string name="minimal_ui_not_available">Functionality not available when minimal UI is enabled</string>
     <string name="missing_keychain_access">Access to Android keychain certificate is missing. Tap this notification to select/import a certificate</string>
+    <string name="no_networks">No networks</string>
+    <plurals name="network_count">
+        <item quantity="one">%d network</item>
+        <item quantity="other">%d networks</item>
+    </plurals>
 
 </resources>

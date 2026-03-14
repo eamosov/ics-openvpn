@@ -15,8 +15,11 @@ See the file todo.txt for ideas/not-yet-implemented features (and the bug tracke
 
 Build instructions:
 
-- Install sdk, ndk, cmake (e.g. with Android studio), swig (3.0+), on
-  Windows perl might be needed for mbedtls
+- Install sdk, ndk, cmake (e.g. with Android studio), swig (3.0+),
+  Go (see main/src/main/go/sing-box/go.mod for minimum version).
+  On Windows perl might be needed for mbedtls.
+  ANDROID_HOME environment variable must point to the Android SDK root
+  (e.g. /opt/homebrew/share/android-commandlinetools or ~/Library/Android/sdk).
 
 Fetch the git submodules (the default urls for the submodules work as
 long as the main repo url is on github):
@@ -26,6 +29,11 @@ long as the main repo url is on github):
 
 Build the project using "gradle build" (Or use Android Studio). Ensure that
 the swig executable is the path, otherwise the build will fail.
+
+sing-box (VLESS/Reality tunnel) is built automatically from the git
+submodule at main/src/main/go/sing-box. This requires Go (version
+matching the sing-box go.mod requirement) to be installed and available
+in PATH (or at /opt/homebrew/bin/go or /usr/local/go/bin/go).
 
 Android studio tends to the whole build of binaries in its sync gradle
 phase to 15 minutes for initial gradle sync are completely normal.

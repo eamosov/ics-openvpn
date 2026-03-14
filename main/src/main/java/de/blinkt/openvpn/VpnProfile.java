@@ -180,6 +180,7 @@ public class VpnProfile implements Serializable, Cloneable {
     public boolean mUseLegacyProvider = false;
     public String mTlSCertProfile = "";
     public long mCreationDate = 0;
+    public HashSet<String> mTrustedWifiList = new HashSet<>();
 
 
     class ChangeLogEntry implements Serializable
@@ -191,6 +192,9 @@ public class VpnProfile implements Serializable, Cloneable {
     }
     public Vector<ChangeLogEntry> changesLog = new Vector<>();
 
+
+    // Runtime-only sing-box local port, not serialized
+    public transient int mSingBoxLocalPort = -1;
 
     private transient PrivateKey mPrivateKey;
     // Public attributes, since I got mad with getter/setter
@@ -226,7 +230,7 @@ public class VpnProfile implements Serializable, Cloneable {
 
     public static boolean doUseOpenVPN3(Context c) {
         SharedPreferences prefs = Preferences.getDefaultSharedPreferences(c);
-        boolean useOpenVPN3 = prefs.getBoolean("ovpn3", false);
+        boolean useOpenVPN3 = prefs.getBoolean("ovpn3", true);
         if (!BuildConfig.openvpn3)
             useOpenVPN3 = false;
         return useOpenVPN3;
@@ -367,6 +371,10 @@ public class VpnProfile implements Serializable, Cloneable {
         {
             changesLog = new Vector<>();
         }
+        if (mTrustedWifiList == null)
+        {
+            mTrustedWifiList = new HashSet<>();
+        }
     }
 
     private void moveOptionsToConnection() {
@@ -484,7 +492,7 @@ public class VpnProfile implements Serializable, Cloneable {
         boolean canUsePlainRemotes = true;
 
         if (mConnections.length == 1) {
-            cfg.append(mConnections[0].getConnectionBlock(configForOvpn3));
+            cfg.append(mConnections[0].getConnectionBlock(configForOvpn3, mSingBoxLocalPort));
         } else {
             for (Connection conn : mConnections) {
                 canUsePlainRemotes = canUsePlainRemotes && conn.isOnlyRemote();
@@ -496,7 +504,7 @@ public class VpnProfile implements Serializable, Cloneable {
             if (canUsePlainRemotes) {
                 for (Connection conn : mConnections) {
                     if (conn.mEnabled) {
-                        cfg.append(conn.getConnectionBlock(configForOvpn3));
+                        cfg.append(conn.getConnectionBlock(configForOvpn3, mSingBoxLocalPort));
                     }
                 }
             }
@@ -876,6 +884,7 @@ public class VpnProfile implements Serializable, Cloneable {
             copy.mConnections[i++] = conn.clone();
         }
         copy.mAllowedAppsVpn = (HashSet<String>) mAllowedAppsVpn.clone();
+        copy.mTrustedWifiList = (HashSet<String>) mTrustedWifiList.clone();
         return copy;
     }
 

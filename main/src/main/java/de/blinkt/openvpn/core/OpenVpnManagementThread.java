@@ -515,6 +515,12 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
             VpnStatus.updateStateString(currentstate, "");
         else
             VpnStatus.updateStateString(currentstate, args[2]);
+
+        // If VPN just connected but should not be running (e.g. on trusted WiFi),
+        // send SIGUSR1 again to pause it
+        if ("CONNECTED".equals(currentstate) && !shouldBeRunning()) {
+            signalusr1();
+        }
     }
 
     private void processByteCount(String argument) {
@@ -727,7 +733,7 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
 
     @Override
     public void networkChange(boolean samenetwork) {
-        if (mWaitingForRelease)
+        if (mWaitingForRelease && shouldBeRunning())
             releaseHold();
         else if (samenetwork)
             managmentCommand("network-change samenetwork\n");

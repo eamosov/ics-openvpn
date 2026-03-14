@@ -327,6 +327,9 @@ public class VpnStatus {
             case userPause:
                 VpnStatus.updateStateString("USERPAUSE", "", R.string.state_userpause, ConnectionStatus.LEVEL_VPNPAUSED);
                 break;
+            case trustedWifi:
+                VpnStatus.updateStateString("TRUSTEDWIFI", "", R.string.state_trustedwifi, ConnectionStatus.LEVEL_VPNPAUSED);
+                break;
         }
 
     }

@@ -130,6 +130,16 @@ public class ConfigParser {
     private HashMap<String, Vector<String>> meta = new HashMap<String, Vector<String>>();
     private String auth_user_pass_file;
 
+    // sing-box parsed values
+    private boolean mSingBoxEnable = false;
+    private String mSingBoxOverrideAddress = "";
+    private String mSingBoxOverridePort = "";
+    private String mSingBoxServerPort = "";
+    private String mSingBoxUUID = "";
+    private String mSingBoxTlsServerName = "";
+    private String mSingBoxTlsPublicKey = "";
+    private String mSingBoxTlsShortId = "";
+
     static public void useEmbbedUserAuth(VpnProfile np, String inlinedata) {
         String data = VpnProfile.getEmbeddedContent(inlinedata);
         String[] parts = data.split("\n");
@@ -754,8 +764,14 @@ public class ConfigParser {
         }
 
 
+        // Parse sing-box options before they get swept into custom config
+        parseSingBoxOptions();
+
         Pair<Connection, Connection[]> conns = parseConnectionOptions(null);
         np.mConnections = conns.second;
+
+        // Apply sing-box settings to all connections
+        applySingBoxToConnections(np.mConnections);
 
         Vector<Vector<String>> connectionBlocks = getAllOption("connection", 1, 1);
 
@@ -776,6 +792,8 @@ public class ConfigParser {
                 np.mConnections[connIndex] = connectionBlockConnection.second[0];
                 connIndex++;
             }
+            // Apply sing-box settings to connection block connections
+            applySingBoxToConnections(np.mConnections);
         }
         if (getOption("remote-random", 0, 0) != null)
             np.mRemoteRandom = true;
@@ -977,6 +995,101 @@ public class ConfigParser {
         else
             throw new ConfigParseError("Unsupported option to --proto " + proto);
         return isudp;
+    }
+
+    private void parseSingBoxOptions() {
+        Set<String> sbKeys = new LinkedHashSet<>(Arrays.asList(
+                "sb_enable",
+                "sb_override_address",
+                "sb_override_port",
+                "sb_server_port",
+                "sb_uuid",
+                "sb_tls_server_name",
+                "sb_tls_public_key",
+                "sb_tls_short_id"
+        ));
+
+        // Collect sb_* values from all three formats:
+        // 1) bare: sb_key value (legacy, backward compat)
+        // 2) setenv sb_key value (alternative)
+        // 3) setenv-safe sb_key value (preferred)
+        // Later entries override earlier ones (last wins).
+        Map<String, String> sbValues = new LinkedHashMap<>();
+
+        // 1) Bare format: options["sb_enable"] -> [["sb_enable", "true"]]
+        for (String key : sbKeys) {
+            Vector<Vector<String>> vals = options.get(key);
+            if (vals != null && !vals.isEmpty()) {
+                Vector<String> lastVal = vals.lastElement();
+                sbValues.put(key, lastVal.size() > 1 ? lastVal.get(1) : "");
+                options.remove(key);
+            }
+        }
+
+        // 2-3) setenv / setenv-safe format: options["setenv"] -> [["setenv", "sb_enable", "true"]]
+        for (String wrapper : new String[]{"setenv", "setenv-safe"}) {
+            Vector<Vector<String>> vals = options.get(wrapper);
+            if (vals == null)
+                continue;
+            Iterator<Vector<String>> it = vals.iterator();
+            while (it.hasNext()) {
+                Vector<String> entry = it.next();
+                if (entry.size() >= 2 && sbKeys.contains(entry.get(1))) {
+                    String key = entry.get(1);
+                    String value = entry.size() > 2 ? entry.get(2) : "";
+                    sbValues.put(key, value);
+                    it.remove();
+                }
+            }
+            if (vals.isEmpty())
+                options.remove(wrapper);
+        }
+
+        // Apply collected values
+        for (Map.Entry<String, String> e : sbValues.entrySet()) {
+            String value = e.getValue();
+            switch (e.getKey()) {
+                case "sb_enable":
+                    mSingBoxEnable = "true".equalsIgnoreCase(value) || "1".equals(value);
+                    break;
+                case "sb_override_address":
+                    mSingBoxOverrideAddress = value;
+                    break;
+                case "sb_override_port":
+                    mSingBoxOverridePort = value;
+                    break;
+                case "sb_server_port":
+                    mSingBoxServerPort = value;
+                    break;
+                case "sb_uuid":
+                    mSingBoxUUID = value;
+                    break;
+                case "sb_tls_server_name":
+                    mSingBoxTlsServerName = value;
+                    break;
+                case "sb_tls_public_key":
+                    mSingBoxTlsPublicKey = value;
+                    break;
+                case "sb_tls_short_id":
+                    mSingBoxTlsShortId = value;
+                    break;
+            }
+        }
+    }
+
+    private void applySingBoxToConnections(Connection[] connections) {
+        if (!mSingBoxEnable)
+            return;
+        for (Connection conn : connections) {
+            conn.mSingBoxEnable = true;
+            conn.mSingBoxOverrideAddress = mSingBoxOverrideAddress;
+            conn.mSingBoxOverridePort = mSingBoxOverridePort;
+            conn.mSingBoxServerPort = mSingBoxServerPort;
+            conn.mSingBoxUUID = mSingBoxUUID;
+            conn.mSingBoxTlsServerName = mSingBoxTlsServerName;
+            conn.mSingBoxTlsPublicKey = mSingBoxTlsPublicKey;
+            conn.mSingBoxTlsShortId = mSingBoxTlsShortId;
+        }
     }
 
     private void checkIgnoreAndInvalidOptions(VpnProfile np) throws ConfigParseError {

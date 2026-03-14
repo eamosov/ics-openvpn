@@ -44,6 +44,7 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
     /* The methods in OpenVPN3 can take a long time, so we do async messages to handle them
      * to avoid ANR on the service main thread */
     private final Handler mHandler;
+    private final Object mPauseLock = new Object();
 
     public OpenVPNThreadv3(OpenVPNService openVpnService, VpnProfile vp) {
         mVp = vp;
@@ -64,6 +65,32 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
         VpnStatus.logInfo(ClientAPI_OpenVPNClientHelper.copyright());
 
         mHandler.postDelayed(this::pollStatus, OpenVPNManagement.mBytecountInterval * 1000);
+
+        // Check if currently on trusted WiFi - if so, wait before connecting
+        if (isOnTrustedWifi()) {
+            VpnStatus.logInfo("On trusted WiFi, delaying VPN connection");
+            VpnStatus.updateStatePause(pauseReason.trustedWifi);
+            synchronized (mPauseLock) {
+                while (isOnTrustedWifi() && !mStopping) {
+                    try {
+                        mPauseLock.wait(1000);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                }
+            }
+            if (mStopping) {
+                VpnStatus.updateStateString("NOPROCESS", "OpenVPN3 thread finished", R.string.state_noprocess, ConnectionStatus.LEVEL_NOTCONNECTED);
+                mHandler.removeCallbacks(this::pollStatus);
+                return;
+            }
+            // Exiting trusted WiFi wait - clear standby flag so DSR knows we're connecting
+            DeviceStateReceiver.clearTrustedWifiStandby();
+            VpnStatus.logInfo("Left trusted WiFi, connecting VPN");
+        } else {
+            // Not on trusted WiFi - clear any stale standby flag from previous session
+            DeviceStateReceiver.clearTrustedWifiStandby();
+        }
 
         ClientAPI_Status status = connect();
         if (status.getError()) {
@@ -316,19 +343,33 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
 
     }
 
+    private volatile boolean mStopping = false;
+    private volatile boolean mReplacing = false;
+
     @Override
     public boolean stopVPN(boolean replaceConnection) {
+        mStopping = true;
+        mReplacing = replaceConnection;
         mHandler.post(this::stop);
+        synchronized (mPauseLock) {
+            mPauseLock.notifyAll();
+        }
         return false;
     }
 
     @Override
     public void networkChange(boolean sameNetwork) {
+        if (mPauseCallback != null && !mPauseCallback.shouldBeRunning()) {
+            return;
+        }
         mHandler.post(() -> { reconnect(1);});
     }
 
+    private PausedStateCallback mPauseCallback;
+
     @Override
     public void setPauseCallback(PausedStateCallback callback) {
+        mPauseCallback = callback;
     }
 
 
@@ -372,6 +413,11 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
             {
                 VpnStatus.updateStateString(name, info);
                 VpnStatus.logInfo(String.format("EVENT: %s: %s", name, info));
+                // If VPN just connected but should not be running (e.g. on trusted WiFi),
+                // pause it immediately
+                if ("CONNECTED".equals(name) && mPauseCallback != null && !mPauseCallback.shouldBeRunning()) {
+                    pause(pauseReason.trustedWifi);
+                }
             }
         }
         if (event.getError())
@@ -403,7 +449,12 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
     @Override
     public void stop() {
         super.stop();
-        mService.openvpnStopped();
+        // Don't call openvpnStopped when being replaced by a new connection,
+        // as the new thread/management is already set up and calling openvpnStopped
+        // would trigger endVpnService → stopSelf, destroying the service.
+        if (!mReplacing) {
+            mService.openvpnStopped();
+        }
     }
 
     @Override
@@ -418,6 +469,28 @@ public class OpenVPNThreadv3 extends ClientAPI_OpenVPNClient implements Runnable
         mHandler.post(() -> {
             super.pause(reason.toString());
         });
+    }
+
+
+    private boolean isOnTrustedWifi() {
+        if (mVp.mTrustedWifiList == null || mVp.mTrustedWifiList.isEmpty()) {
+            android.util.Log.i("OpenVPN3TW", "isOnTrustedWifi: trustedList is null/empty");
+            return false;
+        }
+        String ssid = DeviceStateReceiver.getCurrentWifiSsid(mService);
+        boolean result = ssid != null && mVp.mTrustedWifiList.contains(ssid);
+        android.util.Log.i("OpenVPN3TW", "isOnTrustedWifi: ssid=" + ssid + " trustedList=" + mVp.mTrustedWifiList + " result=" + result);
+        return result;
+    }
+
+    @Override
+    public void resume() {
+        mHandler.post(() -> {
+            super.resume();
+        });
+        synchronized (mPauseLock) {
+            mPauseLock.notifyAll();
+        }
     }
 
     private void pollStatus() {

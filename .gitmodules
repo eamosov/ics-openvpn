@@ -19,3 +19,6 @@
 [submodule "main/src/main/cpp/fmt"]
 	path = main/src/main/cpp/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "main/src/main/go/sing-box"]
+	path = main/src/main/go/sing-box
+	url = https://github.com/SagerNet/sing-box.git

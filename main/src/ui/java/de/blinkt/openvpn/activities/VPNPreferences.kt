@@ -28,6 +28,8 @@ import de.blinkt.openvpn.fragments.Settings_Connections
 import de.blinkt.openvpn.fragments.Settings_IP
 import de.blinkt.openvpn.fragments.Settings_Obscure
 import de.blinkt.openvpn.fragments.Settings_Routing
+import de.blinkt.openvpn.fragments.Settings_SingBox
+import de.blinkt.openvpn.fragments.Settings_Trusted_Wifi
 import de.blinkt.openvpn.fragments.Settings_UserEditable
 import de.blinkt.openvpn.fragments.ShowConfigFragment
 import de.blinkt.openvpn.fragments.VPNProfileList
@@ -130,12 +132,14 @@ class VPNPreferences : BaseActivity(), VpnStatus.ProfileNotifyListener {
             mPagerAdapter.addTab(R.string.settings_auth, Settings_Authentication::class.java)
 
             mPagerAdapter.addTab(R.string.advanced, Settings_Obscure::class.java)
+            mPagerAdapter.addTab(R.string.singbox_tab, Settings_SingBox::class.java)
         } else {
             mPagerAdapter.addTab(R.string.basic, Settings_UserEditable::class.java)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mPagerAdapter.addTab(R.string.vpn_allowed_apps, Settings_Allowed_Apps::class.java)
         }
+        mPagerAdapter.addTab(R.string.trusted_wifi_networks, Settings_Trusted_Wifi::class.java)
         mPagerAdapter.addTab(R.string.generated_config, ShowConfigFragment::class.java)
 
 
@@ -209,6 +213,8 @@ class VPNPreferences : BaseActivity(), VpnStatus.ProfileNotifyListener {
             ShowConfigFragment::class.java,
             Settings_Connections::class.java,
             Settings_Allowed_Apps::class.java,
+            Settings_Trusted_Wifi::class.java,
+            Settings_SingBox::class.java,
         )
     }
 
