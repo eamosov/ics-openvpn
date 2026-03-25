@@ -147,8 +147,9 @@ android {
         abi {
             isEnable = true
             reset()
-            include("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
-            isUniversalApk = true
+            val abis = (findProperty("buildAbis") as? String)?.split(",") ?: listOf("arm64-v8a")
+            include(*abis.toTypedArray())
+            isUniversalApk = abis.size > 1
         }
     }
 
@@ -229,12 +230,14 @@ val singboxSrcDir = file("src/main/go/sing-box")
 val singboxOutputDir = file("${buildDir}/singbox/jniLibs")
 
 data class SingBoxTarget(val goarch: String, val ccPrefix: String)
-val singboxTargets = mapOf(
+val allSingboxTargets = mapOf(
     "arm64-v8a"   to SingBoxTarget("arm64", "aarch64-linux-android21"),
     "armeabi-v7a" to SingBoxTarget("arm",   "armv7a-linux-androideabi21"),
     "x86_64"      to SingBoxTarget("amd64", "x86_64-linux-android21"),
     "x86"         to SingBoxTarget("386",   "i686-linux-android21")
 )
+val buildAbis = (findProperty("buildAbis") as? String)?.split(",") ?: listOf("arm64-v8a")
+val singboxTargets = allSingboxTargets.filterKeys { it in buildAbis }
 
 var gocmd = "go"
 if (file("/opt/homebrew/bin/go").exists())
@@ -243,7 +246,12 @@ else if (file("/usr/local/go/bin/go").exists())
     gocmd = "/usr/local/go/bin/go"
 
 val ndkDir = android.ndkDirectory
-val ndkToolchainBin = File(ndkDir, "toolchains/llvm/prebuilt/darwin-x86_64/bin")
+val ndkHostTag = if (org.gradle.internal.os.OperatingSystem.current().isMacOsX) {
+    if (System.getProperty("os.arch") == "aarch64" || System.getProperty("os.arch") == "arm64") "darwin-x86_64" else "darwin-x86_64"
+} else {
+    "linux-x86_64"
+}
+val ndkToolchainBin = File(ndkDir, "toolchains/llvm/prebuilt/${ndkHostTag}/bin")
 
 singboxTargets.forEach { (abi, target) ->
     tasks.register<Exec>("buildSingBox_${abi}") {
