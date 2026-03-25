@@ -60,6 +60,7 @@ public class YdtunProcess {
 
             List<String> cmd = new ArrayList<>();
             cmd.add(binaryPath);
+            cmd.add("--no-color");
             cmd.add("--mode");
             cmd.add("port-forward");
             cmd.add("--pf-listen");
