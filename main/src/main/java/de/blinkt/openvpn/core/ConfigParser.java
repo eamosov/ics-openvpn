@@ -1087,10 +1087,12 @@ public class ConfigParser {
     }
 
     private void applySingBoxToConnections(Connection[] connections) {
-        if (mTunnelType != Connection.TunnelType.SINGBOX)
+        boolean hasSbFields = !mSingBoxOverrideAddress.isEmpty() || !mSingBoxUUID.isEmpty();
+        if (!hasSbFields && mTunnelType != Connection.TunnelType.SINGBOX)
             return;
         for (Connection conn : connections) {
-            conn.mTunnelType = Connection.TunnelType.SINGBOX;
+            if (mTunnelType == Connection.TunnelType.SINGBOX)
+                conn.mTunnelType = Connection.TunnelType.SINGBOX;
             conn.mSingBoxOverrideAddress = mSingBoxOverrideAddress;
             conn.mSingBoxOverridePort = mSingBoxOverridePort;
             conn.mSingBoxServerPort = mSingBoxServerPort;
@@ -1161,10 +1163,14 @@ public class ConfigParser {
     }
 
     private void applyYdtunToConnections(Connection[] connections) {
-        if (mTunnelType != Connection.TunnelType.YDTUN)
+        // Always apply telemost fields so they're available when user switches
+        // tunnel mode in UI. TunnelType is set separately.
+        boolean hasYdtunFields = !mYdtunTelemostUrls.isEmpty() || !mYdtunTunnelKey.isEmpty();
+        if (!hasYdtunFields && mTunnelType != Connection.TunnelType.YDTUN)
             return;
         for (Connection conn : connections) {
-            conn.mTunnelType = Connection.TunnelType.YDTUN;
+            if (mTunnelType == Connection.TunnelType.YDTUN)
+                conn.mTunnelType = Connection.TunnelType.YDTUN;
             conn.mYdtunTelemostUrls = mYdtunTelemostUrls;
             conn.mYdtunTunnelKey = mYdtunTunnelKey;
             conn.mYdtunTunnelId = mYdtunTunnelId;
