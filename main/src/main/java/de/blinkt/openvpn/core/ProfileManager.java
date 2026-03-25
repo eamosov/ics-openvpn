@@ -238,7 +238,7 @@ public class ProfileManager {
          * to reload the profile from storage */
 
         VpnProfile loadedProfile = get(c, uuid, version, 100);
-        if (loadedProfile != null & loadedProfile.mVersion >= version) {
+        if (loadedProfile != null && loadedProfile.mVersion >= version) {
             VpnStatus.notifyProfileVersionChanged(uuid, version, false);
         }
     }
