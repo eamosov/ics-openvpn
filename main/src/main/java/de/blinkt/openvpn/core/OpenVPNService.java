@@ -121,6 +121,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private long mConnecttime;
     private OpenVPNManagement mManagement;
     private SingBoxProcess mSingBoxProcess;
+    private YdtunProcess mYdtunProcess;
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
 
         @Override
@@ -702,9 +703,12 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         // An old running VPN should now be exited
         mStarting = false;
 
-        // Start sing-box tunnel if enabled for any active connection
+        // Start tunnel proxy if enabled (sing-box or ydtun, mutually exclusive)
         mProfile.mSingBoxLocalPort = -1;
+        mProfile.mYdtunLocalPort = -1;
         Connection singBoxConn = findSingBoxConnection(mProfile);
+        Connection ydtunConn = findYdtunConnection(mProfile);
+
         if (singBoxConn != null) {
             mSingBoxProcess = new SingBoxProcess();
             int localPort = mSingBoxProcess.start(this, singBoxConn);
@@ -714,6 +718,17 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 return;
             }
             mProfile.mSingBoxLocalPort = localPort;
+        }
+
+        if (ydtunConn != null) {
+            mYdtunProcess = new YdtunProcess();
+            int localPort = mYdtunProcess.start(this, ydtunConn);
+            if (localPort < 0) {
+                VpnStatus.logError("ydtun failed to start, aborting VPN");
+                endVpnService();
+                return;
+            }
+            mProfile.mYdtunLocalPort = localPort;
         }
 
         // Start a new session by creating a new thread.
@@ -792,13 +807,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         forceStopOpenVpnProcess();
         stopSingBox();
+        stopYdtun();
     }
 
     private Connection findSingBoxConnection(VpnProfile profile) {
         if (profile.mConnections == null)
             return null;
         for (Connection conn : profile.mConnections) {
-            if (conn.mEnabled && conn.mSingBoxEnable)
+            if (conn.mEnabled && conn.isSingBoxEnabled())
                 return conn;
         }
         return null;
@@ -811,6 +827,25 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         }
         if (mProfile != null)
             mProfile.mSingBoxLocalPort = -1;
+    }
+
+    private Connection findYdtunConnection(VpnProfile profile) {
+        if (profile.mConnections == null)
+            return null;
+        for (Connection conn : profile.mConnections) {
+            if (conn.mEnabled && conn.isYdtunEnabled())
+                return conn;
+        }
+        return null;
+    }
+
+    private void stopYdtun() {
+        if (mYdtunProcess != null) {
+            mYdtunProcess.stop();
+            mYdtunProcess = null;
+        }
+        if (mProfile != null)
+            mProfile.mYdtunLocalPort = -1;
     }
 
     public void forceStopOpenVpnProcess() {
@@ -1077,6 +1112,19 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                     VpnStatus.logInfo("sing-box: excluded route for " + serverIp + "/32");
                 } catch (Exception e) {
                     VpnStatus.logWarning("sing-box: failed to add exclude route: " + e.getMessage());
+                }
+            }
+        }
+
+        // Exclude routes for ydtun/Telemost servers to prevent VPN loop
+        if (mYdtunProcess != null && mYdtunProcess.isRunning()) {
+            for (String ip : mYdtunProcess.getExcludedRoutes()) {
+                try {
+                    IpAddress ydtunRoute = new IpAddress(new CIDRIP(ip, 32), false);
+                    builder.excludeRoute(ydtunRoute.getPrefix());
+                    VpnStatus.logInfo("ydtun: excluded route for " + ip + "/32");
+                } catch (Exception e) {
+                    VpnStatus.logWarning("ydtun: failed to add exclude route for " + ip + ": " + e.getMessage());
                 }
             }
         }

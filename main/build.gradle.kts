@@ -47,7 +47,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDirs("src/main/assets", "build/ovpnassets")
-            jniLibs.srcDirs("${buildDir}/singbox/jniLibs")
+            jniLibs.srcDirs("${buildDir}/singbox/jniLibs", "${buildDir}/ydtun/jniLibs")
         }
 
         create("ui") {
@@ -288,9 +288,70 @@ tasks.register("buildSingBox") {
     }
 }
 
+// --- ydtun (Rust) cross-compilation for Android ---
+
+val ydtunSrcDir = file(findProperty("ydtunSrcDir") ?: "src/main/rust/ydtun")
+val ydtunOutputDir = file("${buildDir}/ydtun/jniLibs")
+
+data class YdtunTarget(val rustTarget: String, val ccPrefix: String)
+val allYdtunTargets = mapOf(
+    "arm64-v8a"   to YdtunTarget("aarch64-linux-android", "aarch64-linux-android21"),
+    "armeabi-v7a" to YdtunTarget("armv7-linux-androideabi", "armv7a-linux-androideabi21"),
+    "x86_64"      to YdtunTarget("x86_64-linux-android", "x86_64-linux-android21"),
+    "x86"         to YdtunTarget("i686-linux-android", "i686-linux-android21")
+)
+val ydtunTargets = allYdtunTargets.filterKeys { it in buildAbis }
+
+val vpxLibDir = file(findProperty("vpxLibDir") ?: "src/main/rust/vpx-android")
+
+ydtunTargets.forEach { (abi, target) ->
+    tasks.register<Exec>("buildYdtun_${abi}") {
+        val outputDir = file("${ydtunOutputDir}/${abi}")
+        val outputFile = file("${outputDir}/libydtun.so")
+        val cc = File(ndkToolchainBin, "${target.ccPrefix}-clang")
+        val ar = File(ndkToolchainBin, "llvm-ar")
+        val linkerEnvKey = "CARGO_TARGET_${target.rustTarget.uppercase().replace('-', '_')}_LINKER"
+
+        workingDir = ydtunSrcDir
+        environment("CC", cc.absolutePath)
+        environment("AR", ar.absolutePath)
+        environment(linkerEnvKey, cc.absolutePath)
+        environment("VPX_LIB_DIR", file("${vpxLibDir}/${abi}").absolutePath)
+        environment("VPX_STATIC", "1")
+        commandLine("cargo", "build",
+            "--target", target.rustTarget,
+            "--release",
+            "--no-default-features",
+            "--features", "port-forward",
+            "--bin", "ydtun")
+
+        doLast {
+            mkdir(outputDir)
+            val builtBinary = file("${ydtunSrcDir}/target/${target.rustTarget}/release/ydtun")
+            copy {
+                from(builtBinary)
+                into(outputDir)
+                rename("ydtun", "libydtun.so")
+            }
+        }
+
+        inputs.files(file("${ydtunSrcDir}/Cargo.toml"), file("${ydtunSrcDir}/Cargo.lock"))
+        inputs.dir(file("${ydtunSrcDir}/src"))
+        outputs.file(outputFile)
+    }
+}
+
+tasks.register("buildYdtun") {
+    description = "Build ydtun for all Android ABIs"
+    ydtunTargets.keys.forEach { abi ->
+        dependsOn("buildYdtun_${abi}")
+    }
+}
+
 afterEvaluate {
     tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
         dependsOn("buildSingBox")
+        dependsOn("buildYdtun")
     }
 }
 

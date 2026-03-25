@@ -131,7 +131,7 @@ public class ConfigParser {
     private String auth_user_pass_file;
 
     // sing-box parsed values
-    private boolean mSingBoxEnable = false;
+    private Connection.TunnelType mTunnelType = Connection.TunnelType.NONE;
     private String mSingBoxOverrideAddress = "";
     private String mSingBoxOverridePort = "";
     private String mSingBoxServerPort = "";
@@ -139,6 +139,11 @@ public class ConfigParser {
     private String mSingBoxTlsServerName = "";
     private String mSingBoxTlsPublicKey = "";
     private String mSingBoxTlsShortId = "";
+
+    // ydtun/Telemost tunnel fields
+    private String mYdtunTelemostUrls = "";
+    private String mYdtunTunnelKey = "";
+    private String mYdtunTunnelId = "0";
 
     static public void useEmbbedUserAuth(VpnProfile np, String inlinedata) {
         String data = VpnProfile.getEmbeddedContent(inlinedata);
@@ -764,14 +769,16 @@ public class ConfigParser {
         }
 
 
-        // Parse sing-box options before they get swept into custom config
+        // Parse tunnel options before they get swept into custom config
         parseSingBoxOptions();
+        parseYdtunOptions();
 
         Pair<Connection, Connection[]> conns = parseConnectionOptions(null);
         np.mConnections = conns.second;
 
-        // Apply sing-box settings to all connections
+        // Apply tunnel settings to all connections
         applySingBoxToConnections(np.mConnections);
+        applyYdtunToConnections(np.mConnections);
 
         Vector<Vector<String>> connectionBlocks = getAllOption("connection", 1, 1);
 
@@ -792,8 +799,9 @@ public class ConfigParser {
                 np.mConnections[connIndex] = connectionBlockConnection.second[0];
                 connIndex++;
             }
-            // Apply sing-box settings to connection block connections
+            // Apply tunnel settings to connection block connections
             applySingBoxToConnections(np.mConnections);
+            applyYdtunToConnections(np.mConnections);
         }
         if (getOption("remote-random", 0, 0) != null)
             np.mRemoteRandom = true;
@@ -1050,7 +1058,8 @@ public class ConfigParser {
             String value = e.getValue();
             switch (e.getKey()) {
                 case "sb_enable":
-                    mSingBoxEnable = "true".equalsIgnoreCase(value) || "1".equals(value);
+                    if ("true".equalsIgnoreCase(value) || "1".equals(value))
+                        mTunnelType = Connection.TunnelType.SINGBOX;
                     break;
                 case "sb_override_address":
                     mSingBoxOverrideAddress = value;
@@ -1078,10 +1087,10 @@ public class ConfigParser {
     }
 
     private void applySingBoxToConnections(Connection[] connections) {
-        if (!mSingBoxEnable)
+        if (mTunnelType != Connection.TunnelType.SINGBOX)
             return;
         for (Connection conn : connections) {
-            conn.mSingBoxEnable = true;
+            conn.mTunnelType = Connection.TunnelType.SINGBOX;
             conn.mSingBoxOverrideAddress = mSingBoxOverrideAddress;
             conn.mSingBoxOverridePort = mSingBoxOverridePort;
             conn.mSingBoxServerPort = mSingBoxServerPort;
@@ -1089,6 +1098,76 @@ public class ConfigParser {
             conn.mSingBoxTlsServerName = mSingBoxTlsServerName;
             conn.mSingBoxTlsPublicKey = mSingBoxTlsPublicKey;
             conn.mSingBoxTlsShortId = mSingBoxTlsShortId;
+        }
+    }
+
+    private void parseYdtunOptions() {
+        Set<String> keys = new LinkedHashSet<>(Arrays.asList(
+                "telemost_enable",
+                "telemost_urls",
+                "telemost_tunnel_key",
+                "telemost_tunnel_id"
+        ));
+
+        Map<String, String> values = new LinkedHashMap<>();
+
+        // 1) Bare format
+        for (String key : keys) {
+            Vector<Vector<String>> vals = options.get(key);
+            if (vals != null && !vals.isEmpty()) {
+                Vector<String> lastVal = vals.lastElement();
+                values.put(key, lastVal.size() > 1 ? lastVal.get(1) : "");
+                options.remove(key);
+            }
+        }
+
+        // 2-3) setenv / setenv-safe format
+        for (String wrapper : new String[]{"setenv", "setenv-safe"}) {
+            Vector<Vector<String>> vals = options.get(wrapper);
+            if (vals == null)
+                continue;
+            Iterator<Vector<String>> it = vals.iterator();
+            while (it.hasNext()) {
+                Vector<String> entry = it.next();
+                if (entry.size() >= 2 && keys.contains(entry.get(1))) {
+                    String key = entry.get(1);
+                    String value = entry.size() > 2 ? entry.get(2) : "";
+                    values.put(key, value);
+                    it.remove();
+                }
+            }
+            if (vals.isEmpty())
+                options.remove(wrapper);
+        }
+
+        for (Map.Entry<String, String> e : values.entrySet()) {
+            String value = e.getValue();
+            switch (e.getKey()) {
+                case "telemost_enable":
+                    if ("true".equalsIgnoreCase(value) || "1".equals(value))
+                        mTunnelType = Connection.TunnelType.YDTUN;
+                    break;
+                case "telemost_urls":
+                    mYdtunTelemostUrls = value;
+                    break;
+                case "telemost_tunnel_key":
+                    mYdtunTunnelKey = value;
+                    break;
+                case "telemost_tunnel_id":
+                    mYdtunTunnelId = value;
+                    break;
+            }
+        }
+    }
+
+    private void applyYdtunToConnections(Connection[] connections) {
+        if (mTunnelType != Connection.TunnelType.YDTUN)
+            return;
+        for (Connection conn : connections) {
+            conn.mTunnelType = Connection.TunnelType.YDTUN;
+            conn.mYdtunTelemostUrls = mYdtunTelemostUrls;
+            conn.mYdtunTunnelKey = mYdtunTunnelKey;
+            conn.mYdtunTunnelId = mYdtunTunnelId;
         }
     }
 

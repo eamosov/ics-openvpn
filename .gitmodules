@@ -22,3 +22,6 @@
 [submodule "main/src/main/go/sing-box"]
 	path = main/src/main/go/sing-box
 	url = https://github.com/SagerNet/sing-box.git
+[submodule "main/src/main/rust/ydtun"]
+	path = main/src/main/rust/ydtun
+	url = git@github.com:eamosov/ydtun.git

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/tunnel_summary"
+            android:paddingBottom="8dp"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
+
+        <RadioGroup
+            android:id="@+id/tunnel_mode_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/tunnel_mode_none"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tunnel_mode_none" />
+
+            <RadioButton
+                android:id="@+id/tunnel_mode_singbox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tunnel_mode_singbox" />
+
+            <RadioButton
+                android:id="@+id/tunnel_mode_ydtun"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tunnel_mode_ydtun" />
+        </RadioGroup>
+
+        <!-- Sing-Box settings -->
+        <LinearLayout
+            android:id="@+id/sb_settings_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/singbox_summary"
+                android:paddingBottom="8dp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textStyle="bold" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_override_address"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_override_address"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/singbox_override_address_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_override_port"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_override_port"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/singbox_override_port_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_server_port"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_server_port"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/singbox_server_port_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_uuid"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_uuid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/singbox_uuid_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_tls_server_name"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_tls_server_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/singbox_tls_server_name_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_tls_public_key"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_tls_public_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/singbox_tls_public_key_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/singbox_tls_short_id"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sb_tls_short_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/singbox_tls_short_id_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Ydtun/Telemost settings -->
+        <LinearLayout
+            android:id="@+id/yd_settings_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ydtun_summary"
+                android:paddingBottom="8dp"
+                android:textAppearance="?android:attr/textAppearanceSmall"
+                android:textStyle="bold" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_telemost_urls"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_telemost_urls"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:hint="@string/ydtun_telemost_urls_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_tunnel_key"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_tunnel_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:hint="@string/ydtun_tunnel_key_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_tunnel_id"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_tunnel_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/ydtun_tunnel_id_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

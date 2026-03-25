@@ -193,8 +193,9 @@ public class VpnProfile implements Serializable, Cloneable {
     public Vector<ChangeLogEntry> changesLog = new Vector<>();
 
 
-    // Runtime-only sing-box local port, not serialized
+    // Runtime-only tunnel local ports, not serialized
     public transient int mSingBoxLocalPort = -1;
+    public transient int mYdtunLocalPort = -1;
 
     private transient PrivateKey mPrivateKey;
     // Public attributes, since I got mad with getter/setter
@@ -492,7 +493,7 @@ public class VpnProfile implements Serializable, Cloneable {
         boolean canUsePlainRemotes = true;
 
         if (mConnections.length == 1) {
-            cfg.append(mConnections[0].getConnectionBlock(configForOvpn3, mSingBoxLocalPort));
+            cfg.append(mConnections[0].getConnectionBlock(configForOvpn3, mSingBoxLocalPort, mYdtunLocalPort));
         } else {
             for (Connection conn : mConnections) {
                 canUsePlainRemotes = canUsePlainRemotes && conn.isOnlyRemote();
@@ -504,7 +505,7 @@ public class VpnProfile implements Serializable, Cloneable {
             if (canUsePlainRemotes) {
                 for (Connection conn : mConnections) {
                     if (conn.mEnabled) {
-                        cfg.append(conn.getConnectionBlock(configForOvpn3, mSingBoxLocalPort));
+                        cfg.append(conn.getConnectionBlock(configForOvpn3, mSingBoxLocalPort, mYdtunLocalPort));
                     }
                 }
             }

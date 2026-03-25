@@ -27,8 +27,15 @@ public class Connection implements Serializable, Cloneable {
     public String mProxyAuthUser = null;
     public String mProxyAuthPassword = null;
 
-    // sing-box tunnel settings
-    public boolean mSingBoxEnable = false;
+    // Tunnel mode selector: NONE, SINGBOX, or YDTUN
+    public enum TunnelType {
+        NONE,
+        SINGBOX,
+        YDTUN
+    }
+    public TunnelType mTunnelType = TunnelType.NONE;
+
+    // sing-box tunnel settings (active when mTunnelType == SINGBOX)
     public String mSingBoxOverrideAddress = "";
     public String mSingBoxOverridePort = "";     // empty = use port from remote
     public String mSingBoxServerPort = "";        // empty = 443
@@ -36,6 +43,14 @@ public class Connection implements Serializable, Cloneable {
     public String mSingBoxTlsServerName = "";
     public String mSingBoxTlsPublicKey = "";
     public String mSingBoxTlsShortId = "";
+
+    // ydtun/Telemost tunnel settings (active when mTunnelType == YDTUN)
+    public String mYdtunTelemostUrls = "";      // comma-separated Telemost meeting URLs
+    public String mYdtunTunnelKey = "";          // encryption key (hex or passphrase)
+    public String mYdtunTunnelId = "0";          // tunnel ID, default 0
+
+    public boolean isSingBoxEnabled() { return mTunnelType == TunnelType.SINGBOX; }
+    public boolean isYdtunEnabled() { return mTunnelType == TunnelType.YDTUN; }
 
     public enum ProxyType {
         NONE,
@@ -48,20 +63,25 @@ public class Connection implements Serializable, Cloneable {
 
 
     public String getConnectionBlock(boolean isOpenVPN3) {
-        return getConnectionBlock(isOpenVPN3, -1);
+        return getConnectionBlock(isOpenVPN3, -1, -1);
+    }
+
+    public String getConnectionBlock(boolean isOpenVPN3, int singBoxLocalPort) {
+        return getConnectionBlock(isOpenVPN3, singBoxLocalPort, -1);
     }
 
     /**
-     * Generate connection block. If singBoxLocalPort > 0 and sing-box is enabled,
-     * override remote to 127.0.0.1:{singBoxLocalPort} tcp-client.
+     * Generate connection block. If a tunnel (sing-box or ydtun) is enabled and its
+     * local port > 0, override remote to 127.0.0.1:{port} tcp-client.
      */
-    public String getConnectionBlock(boolean isOpenVPN3, int singBoxLocalPort) {
+    public String getConnectionBlock(boolean isOpenVPN3, int singBoxLocalPort, int ydtunLocalPort) {
         String cfg = "";
 
-        // Server Address
-        if (mSingBoxEnable && singBoxLocalPort > 0) {
-            // Override remote to sing-box local listener
+        // Server Address — tunnel override
+        if (isSingBoxEnabled() && singBoxLocalPort > 0) {
             cfg += "remote 127.0.0.1 " + singBoxLocalPort + " tcp-client\n";
+        } else if (isYdtunEnabled() && ydtunLocalPort > 0) {
+            cfg += "remote 127.0.0.1 " + ydtunLocalPort + " tcp-client\n";
         } else {
             cfg += "remote ";
             cfg += mServerName;

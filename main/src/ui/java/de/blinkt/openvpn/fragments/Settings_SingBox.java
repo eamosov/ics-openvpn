@@ -16,6 +16,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import de.blinkt.openvpn.R;
 import de.blinkt.openvpn.core.Connection;
+import de.blinkt.openvpn.core.Connection.TunnelType;
 
 public class Settings_SingBox extends Settings_Fragment {
 
@@ -62,8 +63,9 @@ public class Settings_SingBox extends Settings_Fragment {
         if (conn == null)
             return;
 
-        mSbEnable.setChecked(conn.mSingBoxEnable);
-        mSettingsGroup.setVisibility(conn.mSingBoxEnable ? View.VISIBLE : View.GONE);
+        boolean enabled = conn.isSingBoxEnabled();
+        mSbEnable.setChecked(enabled);
+        mSettingsGroup.setVisibility(enabled ? View.VISIBLE : View.GONE);
 
         mOverrideAddress.setText(conn.mSingBoxOverrideAddress);
         mOverridePort.setText(conn.mSingBoxOverridePort);
@@ -90,7 +92,7 @@ public class Settings_SingBox extends Settings_Fragment {
 
         // Apply to all connections
         for (Connection conn : mProfile.mConnections) {
-            conn.mSingBoxEnable = enabled;
+            conn.mTunnelType = enabled ? TunnelType.SINGBOX : TunnelType.NONE;
             conn.mSingBoxOverrideAddress = overrideAddress;
             conn.mSingBoxOverridePort = overridePort;
             conn.mSingBoxServerPort = serverPort;
