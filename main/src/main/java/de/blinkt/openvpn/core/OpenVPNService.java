@@ -1120,9 +1120,16 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         if (mYdtunProcess != null && mYdtunProcess.isRunning()) {
             for (String ip : mYdtunProcess.getExcludedRoutes()) {
                 try {
-                    IpAddress ydtunRoute = new IpAddress(new CIDRIP(ip, 32), false);
-                    builder.excludeRoute(ydtunRoute.getPrefix());
-                    VpnStatus.logInfo("ydtun: excluded route for " + ip + "/32");
+                    if (ip.contains(":")) {
+                        // IPv6 — use InetAddress to validate and exclude via /128
+                        java.net.Inet6Address addr = (java.net.Inet6Address) java.net.InetAddress.getByName(ip);
+                        builder.excludeRoute(new android.net.IpPrefix(addr, 128));
+                        VpnStatus.logInfo("ydtun: excluded route for " + ip + "/128");
+                    } else {
+                        IpAddress ydtunRoute = new IpAddress(new CIDRIP(ip, 32), false);
+                        builder.excludeRoute(ydtunRoute.getPrefix());
+                        VpnStatus.logInfo("ydtun: excluded route for " + ip + "/32");
+                    }
                 } catch (Exception e) {
                     VpnStatus.logWarning("ydtun: failed to add exclude route for " + ip + ": " + e.getMessage());
                 }
