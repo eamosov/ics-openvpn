@@ -345,6 +345,7 @@ public class ProfileManager {
                 profiles.put(vp.getUUID().toString(), vp);
             }
         } catch (IOException | ClassNotFoundException | GeneralSecurityException e) {
+            android.util.Log.e("ProfileManager", "Failed to load profile " + vpnentry + ": " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
             if (!vpnentry.equals(TEMPORARY_PROFILE_FILENAME))
                 VpnStatus.logException("Loading VPN List", e);
         } finally {
