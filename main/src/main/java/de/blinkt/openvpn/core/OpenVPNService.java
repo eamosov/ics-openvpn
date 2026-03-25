@@ -242,12 +242,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         mCommandHandler.post(() -> managment.stopVPN(false));
 
         stopSingBox();
+        stopYdtun();
         endVpnService();
     }
 
     // Similar to revoke but do not try to stop process
     public void openvpnStopped() {
         stopSingBox();
+        stopYdtun();
         endVpnService();
     }
 
@@ -896,6 +898,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         }
 
         stopSingBox();
+        stopYdtun();
 
         if (mDeviceStateReceiver != null) {
             unregisterDeviceStateReceiver(mDeviceStateReceiver);
