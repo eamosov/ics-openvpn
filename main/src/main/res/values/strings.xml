@@ -332,6 +332,12 @@
     <string name="ydtun_max_frame_budget_hint">Default: 50000</string>
     <string name="ydtun_max_fps">Max FPS</string>
     <string name="ydtun_max_fps_hint">Default: 30</string>
+    <string name="ydtun_log_level">Log Level</string>
+    <string-array name="ydtun_log_levels">
+        <item>Info (default)</item>
+        <item>Debug</item>
+        <item>Trace</item>
+    </string-array>
     <string name="ydtun_net_gateway">Exclude networks from VPN</string>
     <string name="ydtun_net_gateway_hint">CIDRs, comma-separated (e.g. 10.0.0.0/8,192.168.1.0/24)</string>
     <string name="device_specific">Device specifics Hacks</string>

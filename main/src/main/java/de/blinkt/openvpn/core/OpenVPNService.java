@@ -711,10 +711,19 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         mStarting = false;
 
         // Start tunnel proxy if enabled (sing-box or ydtun, mutually exclusive)
+        // Skip proxy startup if on trusted WiFi — VPN won't connect anyway
         mProfile.mSingBoxLocalPort = -1;
         mProfile.mYdtunLocalPort = -1;
-        Connection singBoxConn = findSingBoxConnection(mProfile);
-        Connection ydtunConn = findYdtunConnection(mProfile);
+        boolean trustedCheck = DeviceStateReceiver.isOnTrustedWifi(this, mProfile);
+        boolean standbyCheck = DeviceStateReceiver.isTrustedWifiStandby();
+        boolean onTrustedWifi = trustedCheck || standbyCheck;
+        VpnStatus.logInfo("Trusted WiFi check: ssid=" + trustedCheck + " standby=" + standbyCheck
+                + " trustedList=" + (mProfile.mTrustedWifiList != null ? mProfile.mTrustedWifiList : "null"));
+        Connection singBoxConn = onTrustedWifi ? null : findSingBoxConnection(mProfile);
+        Connection ydtunConn = onTrustedWifi ? null : findYdtunConnection(mProfile);
+        if (onTrustedWifi) {
+            VpnStatus.logInfo("Trusted WiFi detected, skipping proxy tunnel startup");
+        }
 
         if (singBoxConn != null) {
             mSingBoxProcess = new SingBoxProcess();
@@ -736,7 +745,9 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 return;
             }
             mProfile.mYdtunLocalPort = localPort;
-
+            // For OpenVPN 3: wait for KCP here (no management hold mechanism).
+            // For OpenVPN 2: KCP is also checked in handleHold(), but waiting here
+            // ensures the tunnel is ready before OpenVPN tries to connect.
             VpnStatus.logInfo("ydtun: waiting for KCP tunnel...");
             if (!mYdtunProcess.waitForKcpAlive()) {
                 VpnStatus.logError("ydtun: KCP tunnel failed to establish");

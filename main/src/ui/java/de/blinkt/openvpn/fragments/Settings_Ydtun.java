@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -30,6 +31,7 @@ public class Settings_Ydtun extends Settings_Fragment {
     private EditText mMaxFrameBudget;
     private EditText mMaxFps;
     private EditText mNetGateway;
+    private Spinner mLogLevel;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -45,6 +47,7 @@ public class Settings_Ydtun extends Settings_Fragment {
         mMaxFrameBudget = v.findViewById(R.id.yd_max_frame_budget);
         mMaxFps = v.findViewById(R.id.yd_max_fps);
         mNetGateway = v.findViewById(R.id.yd_net_gateway);
+        mLogLevel = v.findViewById(R.id.yd_log_level);
 
         mYdtunEnable.setOnCheckedChangeListener((buttonView, isChecked) ->
                 mSettingsGroup.setVisibility(isChecked ? View.VISIBLE : View.GONE)
@@ -77,6 +80,7 @@ public class Settings_Ydtun extends Settings_Fragment {
         mMaxFrameBudget.setText(conn.mYdtunMaxFrameBudget);
         mMaxFps.setText(conn.mYdtunMaxFps);
         mNetGateway.setText(conn.mYdtunNetGateway);
+        mLogLevel.setSelection(conn.mYdtunLogLevel);
     }
 
     @Override
@@ -93,6 +97,7 @@ public class Settings_Ydtun extends Settings_Fragment {
         String maxFrameBudget = mMaxFrameBudget.getText().toString().trim();
         String maxFps = mMaxFps.getText().toString().trim();
         String netGateway = mNetGateway.getText().toString().trim();
+        int logLevel = mLogLevel.getSelectedItemPosition();
 
         for (Connection conn : mProfile.mConnections) {
             conn.mTunnelType = enabled ? TunnelType.YDTUN : TunnelType.NONE;
@@ -104,6 +109,7 @@ public class Settings_Ydtun extends Settings_Fragment {
             conn.mYdtunMaxFrameBudget = maxFrameBudget;
             conn.mYdtunMaxFps = maxFps;
             conn.mYdtunNetGateway = netGateway;
+            conn.mYdtunLogLevel = logLevel;
         }
     }
 }

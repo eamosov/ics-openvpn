@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
+import android.widget.Spinner;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
@@ -43,6 +44,7 @@ public class Settings_Tunnel extends Settings_Fragment {
     private EditText mYdMaxFrameBudget;
     private EditText mYdMaxFps;
     private EditText mYdNetGateway;
+    private Spinner mYdLogLevel;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -68,6 +70,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         mYdMaxFrameBudget = v.findViewById(R.id.yd_max_frame_budget);
         mYdMaxFps = v.findViewById(R.id.yd_max_fps);
         mYdNetGateway = v.findViewById(R.id.yd_net_gateway);
+        mYdLogLevel = v.findViewById(R.id.yd_log_level);
 
         mTunnelModeGroup.setOnCheckedChangeListener((group, checkedId) -> updateVisibility());
 
@@ -122,6 +125,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         mYdMaxFrameBudget.setText(conn.mYdtunMaxFrameBudget);
         mYdMaxFps.setText(conn.mYdtunMaxFps);
         mYdNetGateway.setText(conn.mYdtunNetGateway);
+        mYdLogLevel.setSelection(conn.mYdtunLogLevel);
 
         updateVisibility();
     }
@@ -156,6 +160,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         String ydMaxFrameBudget = mYdMaxFrameBudget.getText().toString().trim();
         String ydMaxFps = mYdMaxFps.getText().toString().trim();
         String ydNetGateway = mYdNetGateway.getText().toString().trim();
+        int ydLogLevel = mYdLogLevel.getSelectedItemPosition();
 
         for (Connection conn : mProfile.mConnections) {
             conn.mTunnelType = tunnelType;
@@ -176,6 +181,7 @@ public class Settings_Tunnel extends Settings_Fragment {
             conn.mYdtunMaxFrameBudget = ydMaxFrameBudget;
             conn.mYdtunMaxFps = ydMaxFps;
             conn.mYdtunNetGateway = ydNetGateway;
+            conn.mYdtunLogLevel = ydLogLevel;
         }
     }
 }

@@ -66,7 +66,11 @@ public class YdtunProcess {
             List<String> cmd = new ArrayList<>();
             cmd.add(binaryPath);
             cmd.add("--no-color");
-            cmd.add("-v");
+            if (conn.mYdtunLogLevel == 1) {
+                cmd.add("-v");
+            } else if (conn.mYdtunLogLevel >= 2) {
+                cmd.add("-vv");
+            }
             cmd.add("--api-port");
             cmd.add(String.valueOf(mApiPort));
             cmd.add("--mode");

@@ -46,6 +46,7 @@ import de.blinkt.openvpn.activities.ConfigConverter
 import de.blinkt.openvpn.activities.DisconnectVPN
 import de.blinkt.openvpn.activities.FileSelect
 import de.blinkt.openvpn.activities.VPNPreferences
+import de.blinkt.openvpn.core.Connection
 import de.blinkt.openvpn.core.ConnectionStatus
 import de.blinkt.openvpn.core.OpenVPNService
 import de.blinkt.openvpn.core.PasswordDialogFragment.Companion.newInstance
@@ -596,7 +597,22 @@ class VPNProfileList : ListFragment(), View.OnClickListener, StateListener {
             settingsview.setOnClickListener(View.OnClickListener { view: View? -> editVPN(profile) })
 
             val subtitle = v.findViewById<TextView>(R.id.vpn_item_subtitle)
+            val proxyBadge = v.findViewById<TextView>(R.id.vpn_item_proxy_badge)
             val warningText = getWarningText(requireContext(), profile)
+
+            // Show proxy badge next to profile name
+            val tunnelType = profile.mConnections?.firstOrNull { it.mEnabled }?.mTunnelType
+            if (tunnelType == Connection.TunnelType.SINGBOX || tunnelType == Connection.TunnelType.YDTUN) {
+                val label = if (tunnelType == Connection.TunnelType.SINGBOX) "[sb]" else "[tm]"
+                proxyBadge.text = label
+                val isActive = VpnStatus.isVPNActive()
+                        && profile.getUUIDString() == VpnStatus.getLastConnectedVPNProfile()
+                val color = if (isActive) 0xFF4CAF50.toInt() else 0xFF9E9E9E.toInt()
+                proxyBadge.setTextColor(color)
+                proxyBadge.visibility = View.VISIBLE
+            } else {
+                proxyBadge.visibility = View.GONE
+            }
 
             if (profile === defaultVPN) {
                 if (warningText.length > 0) warningText.append(" ")

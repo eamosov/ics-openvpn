@@ -53,6 +53,9 @@ public class Connection implements Serializable, Cloneable {
     public String mYdtunMaxFrameBudget = "";     // max frame budget in bytes (default: 50000)
     public String mYdtunMaxFps = "";             // max adaptive FPS (default: 30)
 
+    // Log level: 0=info (default), 1=debug (-v), 2=trace (-vv)
+    public int mYdtunLogLevel = 0;
+
     // Networks to exclude from VPN routing when Telemost is active (comma-separated CIDRs)
     public String mYdtunNetGateway = "";
 

@@ -48,6 +48,19 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
         sTrustedWifiStandby = false;
     }
 
+    /** Check if VPN is in trusted WiFi standby mode (should not start proxy tunnels) */
+    public static boolean isTrustedWifiStandby() {
+        return sTrustedWifiStandby;
+    }
+
+    /** Check if currently connected to a trusted WiFi for the given profile */
+    public static boolean isOnTrustedWifi(Context context, VpnProfile profile) {
+        if (profile == null || profile.mTrustedWifiList == null || profile.mTrustedWifiList.isEmpty())
+            return false;
+        String ssid = getCurrentWifiSsid(context);
+        return ssid != null && profile.mTrustedWifiList.contains(ssid);
+    }
+
     // Window time in s
     private final int TRAFFIC_WINDOW = 60;
     // Data traffic limit in bytes
@@ -371,12 +384,16 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
                     screen = connectState.DISCONNECTED;
 
                 if (wasOnTrustedWifi && !nowOnTrustedWifi) {
-                    // Left trusted WiFi - VPN thread in wait loop will detect this
-                    // and call connect() automatically. Just clear the flag.
-                    android.util.Log.i("DSR", "Left trusted WiFi, VPN thread will reconnect");
+                    // Left trusted WiFi - restart VPN service to launch proxy tunnels
+                    // (ydtun/sing-box were skipped when entering trusted WiFi)
+                    android.util.Log.i("DSR", "Left trusted WiFi, restarting VPN with proxy");
                     VpnStatus.logInfo(R.string.trusted_wifi_resume);
                     sTrustedWifiStandby = false;
                     mDisconnectHandler.removeCallbacks(mDelayDisconnectRunnable);
+                    VpnProfile profile = ProfileManager.getLastConnectedVpn();
+                    if (profile != null) {
+                        VPNLaunchHelper.startOpenVpn(profile, context, "leaving trusted WiFi", true);
+                    }
                 } else if (shouldBeConnected()) {
                     mDisconnectHandler.removeCallbacks(mDelayDisconnectRunnable);
 
@@ -398,10 +415,14 @@ public class DeviceStateReceiver extends BroadcastReceiver implements ByteCountL
             // WiFi is gone, so clear trusted WiFi state
             if (sCachedWifiSsid == null && wasOnTrustedWifi) {
                 trustedWifi = connectState.SHOULDBECONNECTED;
-                android.util.Log.i("DSR", "Left trusted WiFi (network null), VPN thread will reconnect");
+                android.util.Log.i("DSR", "Left trusted WiFi (network null), restarting VPN with proxy");
                 VpnStatus.logInfo(R.string.trusted_wifi_resume);
                 sTrustedWifiStandby = false;
                 mDisconnectHandler.removeCallbacks(mDelayDisconnectRunnable);
+                VpnProfile profile = ProfileManager.getLastConnectedVpn();
+                if (profile != null) {
+                    VPNLaunchHelper.startOpenVpn(profile, context, "leaving trusted WiFi (disconnect)", true);
+                }
             } else if (sendusr1) {
                 network = connectState.PENDINGDISCONNECT;
                 mDisconnectHandler.postDelayed(mDelayDisconnectRunnable, DISCONNECT_WAIT * 1000);
