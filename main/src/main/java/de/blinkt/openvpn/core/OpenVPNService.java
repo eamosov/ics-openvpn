@@ -516,8 +516,13 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     public boolean stopVPN(boolean replaceConnection) throws RemoteException {
         if (getManagement() != null)
             return getManagement().stopVPN(replaceConnection);
-        else
-            return false;
+
+        // Management not yet created (e.g. still waiting for ydtun KCP).
+        // Stop ydtun and end service directly.
+        stopSingBox();
+        stopYdtun();
+        endVpnService();
+        return true;
     }
 
     @Override
@@ -731,6 +736,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 return;
             }
             mProfile.mYdtunLocalPort = localPort;
+
+            VpnStatus.logInfo("ydtun: waiting for KCP tunnel...");
+            if (!mYdtunProcess.waitForKcpAlive()) {
+                VpnStatus.logError("ydtun: KCP tunnel failed to establish");
+                endVpnService();
+                return;
+            }
+            VpnStatus.logInfo("ydtun: KCP tunnel ready");
         }
 
         // Start a new session by creating a new thread.
@@ -839,6 +852,15 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 return conn;
         }
         return null;
+    }
+
+    public YdtunProcess getYdtunProcess() {
+        return mYdtunProcess;
+    }
+
+    public boolean isLocalProxyActive() {
+        return (mYdtunProcess != null && mYdtunProcess.isRunning())
+                || (mSingBoxProcess != null && mSingBoxProcess.isRunning());
     }
 
     private void stopYdtun() {
@@ -1105,6 +1127,35 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         builder.setConfigureIntent(getGraphPendingIntent());
 
+        // Exclude telemost_net_gateway networks from VPN routing (only when Telemost tunnel is active)
+        if (mProfile.mConnections != null && mProfile.mConnections.length > 0) {
+            Connection ydConn = mProfile.mConnections[0];
+            if (ydConn.isYdtunEnabled() && ydConn.mYdtunNetGateway != null && !ydConn.mYdtunNetGateway.isEmpty()) {
+                for (String network : ydConn.mYdtunNetGateway.split(",")) {
+                    network = network.trim();
+                    if (network.isEmpty()) continue;
+                    try {
+                        if (network.contains(":")) {
+                            // IPv6
+                            String[] parts = network.split("/");
+                            java.net.Inet6Address addr = (java.net.Inet6Address) java.net.InetAddress.getByName(parts[0]);
+                            int prefix = parts.length > 1 ? Integer.parseInt(parts[1]) : 128;
+                            builder.excludeRoute(new android.net.IpPrefix(addr, prefix));
+                        } else {
+                            // IPv4
+                            String[] parts = network.split("/");
+                            int prefix = parts.length > 1 ? Integer.parseInt(parts[1]) : 32;
+                            IpAddress route = new IpAddress(new CIDRIP(parts[0], prefix), false);
+                            builder.excludeRoute(route.getPrefix());
+                        }
+                        VpnStatus.logInfo("telemost: excluded route for " + network);
+                    } catch (Exception e) {
+                        VpnStatus.logWarning("telemost: failed to exclude route " + network + ": " + e.getMessage());
+                    }
+                }
+            }
+        }
+
         // Exclude route for sing-box VLESS server to prevent VPN loop
         if (mSingBoxProcess != null && mSingBoxProcess.isRunning()) {
             String serverIp = mSingBoxProcess.getRemoteServerIp();
@@ -1115,26 +1166,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                     VpnStatus.logInfo("sing-box: excluded route for " + serverIp + "/32");
                 } catch (Exception e) {
                     VpnStatus.logWarning("sing-box: failed to add exclude route: " + e.getMessage());
-                }
-            }
-        }
-
-        // Exclude routes for ydtun/Telemost servers to prevent VPN loop
-        if (mYdtunProcess != null && mYdtunProcess.isRunning()) {
-            for (String ip : mYdtunProcess.getExcludedRoutes()) {
-                try {
-                    if (ip.contains(":")) {
-                        // IPv6 — use InetAddress to validate and exclude via /128
-                        java.net.Inet6Address addr = (java.net.Inet6Address) java.net.InetAddress.getByName(ip);
-                        builder.excludeRoute(new android.net.IpPrefix(addr, 128));
-                        VpnStatus.logInfo("ydtun: excluded route for " + ip + "/128");
-                    } else {
-                        IpAddress ydtunRoute = new IpAddress(new CIDRIP(ip, 32), false);
-                        builder.excludeRoute(ydtunRoute.getPrefix());
-                        VpnStatus.logInfo("ydtun: excluded route for " + ip + "/32");
-                    }
-                } catch (Exception e) {
-                    VpnStatus.logWarning("ydtun: failed to add exclude route for " + ip + ": " + e.getMessage());
                 }
             }
         }

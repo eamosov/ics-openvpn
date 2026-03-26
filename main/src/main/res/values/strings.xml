@@ -324,6 +324,16 @@
     <string name="ydtun_tunnel_key_hint">Encryption key (hex or passphrase)</string>
     <string name="ydtun_tunnel_id">Tunnel ID</string>
     <string name="ydtun_tunnel_id_hint">Default: 0</string>
+    <string name="ydtun_max_bw">Max Bandwidth (Mbit/s)</string>
+    <string name="ydtun_max_bw_hint">Default: 10</string>
+    <string name="ydtun_force_tcp_relay">Force TCP relay</string>
+    <string name="ydtun_force_tcp_relay_summary">Use TURN TCP relay instead of UDP</string>
+    <string name="ydtun_max_frame_budget">Max Frame Budget (bytes)</string>
+    <string name="ydtun_max_frame_budget_hint">Default: 50000</string>
+    <string name="ydtun_max_fps">Max FPS</string>
+    <string name="ydtun_max_fps_hint">Default: 30</string>
+    <string name="ydtun_net_gateway">Exclude networks from VPN</string>
+    <string name="ydtun_net_gateway_hint">CIDRs, comma-separated (e.g. 10.0.0.0/8,192.168.1.0/24)</string>
     <string name="device_specific">Device specifics Hacks</string>
     <string name="cannotparsecert">Cannot display certificate information</string>
     <string name="appbehaviour">Application behaviour</string>

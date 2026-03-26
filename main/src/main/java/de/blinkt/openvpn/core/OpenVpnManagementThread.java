@@ -230,9 +230,8 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
             Method getInt = FileDescriptor.class.getDeclaredMethod("getInt$");
             int fdint = (Integer) getInt.invoke(fd);
 
-            // You can even get more evil by parsing toString() and extract the int from that :)
-
             boolean result = mOpenVPNService.protect(fdint);
+            VpnStatus.logInfo("PROTECTFD: protect(" + fdint + ") = " + result);
             if (!result)
                 VpnStatus.logWarning("Could not protect VPN socket");
 
@@ -319,9 +318,12 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
             /* Ignore this kind of message too */
             return;
         } else if (command.startsWith("PROTECTFD: ")) {
+            VpnStatus.logInfo("PROTECTFD: received command: " + command);
             FileDescriptor fdtoprotect = mFDList.pollFirst();
             if (fdtoprotect != null)
                 protectFileDescriptor(fdtoprotect);
+            else
+                VpnStatus.logWarning("PROTECTFD: no fd in queue!");
         } else {
             Log.i(TAG, "Got unrecognized line from managment" + command);
             VpnStatus.logWarning("MGMT: Got unrecognized line from management:" + command);
@@ -399,11 +401,32 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
             if (waittime > 1)
                 VpnStatus.updateStateString("CONNECTRETRY", String.valueOf(waittime),
                         R.string.state_waitconnectretry, ConnectionStatus.LEVEL_CONNECTING_NO_SERVER_REPLY_YET);
-            mResumeHandler.postDelayed(mResumeHoldRunnable, waittime * 1000L);
             if (waittime > 5)
                 VpnStatus.logInfo(R.string.state_waitconnectretry, String.valueOf(waittime));
             else
                 VpnStatus.logDebug(R.string.state_waitconnectretry, String.valueOf(waittime));
+
+            Thread kcpCheckThread = new Thread(() -> {
+                try {
+                    if (waittime > 0) Thread.sleep(waittime * 1000L);
+                } catch (InterruptedException e) { return; }
+
+                YdtunProcess ydtun = mOpenVPNService.getYdtunProcess();
+                if (ydtun != null && ydtun.isRunning()) {
+                    VpnStatus.logInfo("ydtun: waiting for KCP tunnel before reconnect...");
+                    if (!ydtun.waitForKcpAlive()) {
+                        VpnStatus.logWarning("ydtun: KCP check failed, releasing hold anyway");
+                    } else {
+                        VpnStatus.logInfo("ydtun: KCP tunnel ready, releasing hold");
+                    }
+                }
+
+                mResumeHandler.post(() -> {
+                    if (shouldBeRunning()) releaseHoldCmd();
+                });
+            }, "YdtunKcpCheck");
+            kcpCheckThread.setDaemon(true);
+            kcpCheckThread.start();
 
         } else {
             VpnStatus.updateStatePause(lastPauseReason);

@@ -13,13 +13,15 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+
 
 public class YdtunProcess {
     private static final String TAG = "Ydtun";
@@ -28,8 +30,10 @@ public class YdtunProcess {
 
     private Process mProcess;
     private int mLocalPort;
+    private int mApiPort;
     private Thread mLogThread;
-    private final List<String> mExcludedIps = Collections.synchronizedList(new ArrayList<>());
+    private volatile HttpURLConnection mKcpConnection;
+
 
     private static String getYdtunPath(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -55,12 +59,16 @@ public class YdtunProcess {
     public int start(Context context, Connection conn) {
         try {
             mLocalPort = findFreePort();
+            mApiPort = findFreePort();
 
             String binaryPath = getYdtunPath(context);
 
             List<String> cmd = new ArrayList<>();
             cmd.add(binaryPath);
             cmd.add("--no-color");
+            cmd.add("-v");
+            cmd.add("--api-port");
+            cmd.add(String.valueOf(mApiPort));
             cmd.add("--mode");
             cmd.add("port-forward");
             cmd.add("--pf-listen");
@@ -78,32 +86,42 @@ public class YdtunProcess {
                 cmd.add(conn.mYdtunTunnelId);
             }
 
+            if (!TextUtils.isEmpty(conn.mYdtunMaxBw)) {
+                cmd.add("--max-bw");
+                cmd.add(conn.mYdtunMaxBw);
+            }
+
+            if (conn.mYdtunForceTcpRelay) {
+                cmd.add("--force-tcp-relay");
+            }
+
+            if (!TextUtils.isEmpty(conn.mYdtunMaxFrameBudget)) {
+                cmd.add("--max-frame-budget");
+                cmd.add(conn.mYdtunMaxFrameBudget);
+            }
+
+            if (!TextUtils.isEmpty(conn.mYdtunMaxFps)) {
+                cmd.add("--max-fps");
+                cmd.add(conn.mYdtunMaxFps);
+            }
+
             VpnStatus.logInfo("ydtun: starting on port " + mLocalPort);
             VpnStatus.logInfo("ydtun: telemost URLs: " + conn.mYdtunTelemostUrls);
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.environment().put("LD_LIBRARY_PATH", context.getApplicationInfo().nativeLibraryDir);
-            pb.environment().put("RUST_LOG", "ydtun=info");
             pb.redirectErrorStream(true);
 
             mProcess = pb.start();
 
-            // Start log reader thread — also parses ROUTE_EXCLUDE lines
+            // Start log reader thread
             mLogThread = new Thread(() -> {
                 try {
                     BufferedReader reader = new BufferedReader(
                             new InputStreamReader(mProcess.getInputStream(), StandardCharsets.UTF_8));
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("ROUTE_EXCLUDE: ")) {
-                            String ip = line.substring("ROUTE_EXCLUDE: ".length()).trim();
-                            if (!ip.isEmpty() && !mExcludedIps.contains(ip)) {
-                                mExcludedIps.add(ip);
-                                VpnStatus.logInfo("ydtun: route exclude " + ip);
-                            }
-                        } else {
-                            VpnStatus.logInfo("ydtun: " + line);
-                        }
+                        VpnStatus.logInfo("ydtun: " + line);
                     }
                 } catch (IOException e) {
                     // Process ended
@@ -159,9 +177,15 @@ public class YdtunProcess {
     }
 
     public void stop() {
+        // Abort any blocking /alive/kcp request first
+        HttpURLConnection kcpConn = mKcpConnection;
+        if (kcpConn != null) {
+            kcpConn.disconnect();
+        }
+
         if (mProcess != null) {
-            VpnStatus.logInfo("ydtun: stopping");
-            mProcess.destroy();
+            VpnStatus.logInfo("ydtun: stopping (SIGKILL)");
+            mProcess.destroyForcibly();
             try {
                 mProcess.waitFor();
             } catch (InterruptedException e) {
@@ -186,15 +210,52 @@ public class YdtunProcess {
         }
     }
 
-    /**
-     * Returns list of IPs that ydtun connects to (Telemost, TURN servers).
-     * These should be excluded from VPN routes.
-     */
-    public List<String> getExcludedRoutes() {
-        return new ArrayList<>(mExcludedIps);
-    }
-
     public int getLocalPort() {
         return mLocalPort;
+    }
+
+    public int getApiPort() {
+        return mApiPort;
+    }
+
+    /**
+     * Wait for ydtun KCP tunnel to become ready via REST API.
+     * The /alive/kcp endpoint polls internally (200ms interval, 120s timeout).
+     */
+    public boolean waitForKcpAlive() {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("http://127.0.0.1:" + mApiPort + "/alive/kcp");
+            conn = (HttpURLConnection) url.openConnection();
+            mKcpConnection = conn;
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(130000); // ydtun polls up to 120s internally
+            conn.setRequestMethod("GET");
+
+            int code = conn.getResponseCode();
+            if (code != 200) {
+                VpnStatus.logError("ydtun: /alive/kcp returned HTTP " + code);
+                return false;
+            }
+
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            reader.close();
+
+            String body = sb.toString();
+            return body.contains("\"alive\":true") || body.contains("\"alive\": true");
+
+        } catch (Exception e) {
+            VpnStatus.logError("ydtun: /alive/kcp check failed: " + e.getMessage());
+            return false;
+        } finally {
+            mKcpConnection = null;
+            if (conn != null) conn.disconnect();
+        }
     }
 }

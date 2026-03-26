@@ -144,6 +144,11 @@ public class ConfigParser {
     private String mYdtunTelemostUrls = "";
     private String mYdtunTunnelKey = "";
     private String mYdtunTunnelId = "0";
+    private String mYdtunMaxBw = "";
+    private boolean mYdtunForceTcpRelay = false;
+    private String mYdtunMaxFrameBudget = "";
+    private String mYdtunMaxFps = "";
+    private String mYdtunNetGateway = "";
 
     static public void useEmbbedUserAuth(VpnProfile np, String inlinedata) {
         String data = VpnProfile.getEmbeddedContent(inlinedata);
@@ -352,9 +357,52 @@ public class ConfigParser {
         return parameters;
     }
 
+    /**
+     * Extract "setenv-safe android_option ..." / "setenv android_option ..." values
+     * and inject them as regular OpenVPN options. This allows Android-specific options
+     * in a shared .ovpn config (e.g. "setenv-safe android_option redirect-gateway def1").
+     */
+    private void injectAndroidOptions() {
+        for (String wrapper : new String[]{"setenv", "setenv-safe"}) {
+            Vector<Vector<String>> vals = options.get(wrapper);
+            if (vals == null) continue;
+            Iterator<Vector<String>> it = vals.iterator();
+            while (it.hasNext()) {
+                Vector<String> entry = it.next();
+                if (entry.size() >= 3 && "android_option".equals(entry.get(1))) {
+                    // Reconstruct the option string from remaining args
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 2; i < entry.size(); i++) {
+                        if (i > 2) sb.append(' ');
+                        sb.append(entry.get(i));
+                    }
+                    // Parse as regular OpenVPN option line
+                    Vector<String> args;
+                    try {
+                        args = parseline(sb.toString());
+                    } catch (ConfigParseError e) {
+                        continue;
+                    }
+                    if (!args.isEmpty()) {
+                        String optionname = args.get(0);
+                        if (!options.containsKey(optionname)) {
+                            options.put(optionname, new Vector<>());
+                        }
+                        options.get(optionname).add(args);
+                    }
+                    it.remove();
+                }
+            }
+            if (vals.isEmpty()) options.remove(wrapper);
+        }
+    }
+
     // This method is far too long
     @SuppressWarnings("ConstantConditions")
     public VpnProfile convertProfile() throws ConfigParseError, IOException {
+        // Inject android_option values as regular OpenVPN options
+        injectAndroidOptions();
+
         boolean noauthtypeset = true;
         VpnProfile np = new VpnProfile(CONVERTED_PROFILE);
         // Pull, client, tls-client
@@ -1108,7 +1156,12 @@ public class ConfigParser {
                 "telemost_enable",
                 "telemost_urls",
                 "telemost_tunnel_key",
-                "telemost_tunnel_id"
+                "telemost_tunnel_id",
+                "telemost_max_bw",
+                "telemost_force_tcp_relay",
+                "telemost_max_frame_budget",
+                "telemost_max_fps",
+                "telemost_net_gateway"
         ));
 
         Map<String, String> values = new LinkedHashMap<>();
@@ -1158,6 +1211,21 @@ public class ConfigParser {
                 case "telemost_tunnel_id":
                     mYdtunTunnelId = value;
                     break;
+                case "telemost_max_bw":
+                    mYdtunMaxBw = value;
+                    break;
+                case "telemost_force_tcp_relay":
+                    mYdtunForceTcpRelay = "true".equalsIgnoreCase(value) || "1".equals(value);
+                    break;
+                case "telemost_max_frame_budget":
+                    mYdtunMaxFrameBudget = value;
+                    break;
+                case "telemost_max_fps":
+                    mYdtunMaxFps = value;
+                    break;
+                case "telemost_net_gateway":
+                    mYdtunNetGateway = value;
+                    break;
             }
         }
     }
@@ -1174,6 +1242,11 @@ public class ConfigParser {
             conn.mYdtunTelemostUrls = mYdtunTelemostUrls;
             conn.mYdtunTunnelKey = mYdtunTunnelKey;
             conn.mYdtunTunnelId = mYdtunTunnelId;
+            conn.mYdtunMaxBw = mYdtunMaxBw;
+            conn.mYdtunForceTcpRelay = mYdtunForceTcpRelay;
+            conn.mYdtunMaxFrameBudget = mYdtunMaxFrameBudget;
+            conn.mYdtunMaxFps = mYdtunMaxFps;
+            conn.mYdtunNetGateway = mYdtunNetGateway;
         }
     }
 

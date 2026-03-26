@@ -204,6 +204,65 @@
                     android:inputType="number"
                     android:hint="@string/ydtun_tunnel_id_hint" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_max_bw"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_max_bw"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/ydtun_max_bw_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/yd_force_tcp_relay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ydtun_force_tcp_relay"
+                android:paddingBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_max_frame_budget"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_max_frame_budget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/ydtun_max_frame_budget_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_max_fps"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_max_fps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:hint="@string/ydtun_max_fps_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/ydtun_net_gateway"
+                android:paddingBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/yd_net_gateway"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:hint="@string/ydtun_net_gateway_hint" />
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
     </LinearLayout>

@@ -48,6 +48,13 @@ public class Connection implements Serializable, Cloneable {
     public String mYdtunTelemostUrls = "";      // comma-separated Telemost meeting URLs
     public String mYdtunTunnelKey = "";          // encryption key (hex or passphrase)
     public String mYdtunTunnelId = "0";          // tunnel ID, default 0
+    public String mYdtunMaxBw = "";              // max bandwidth in Mbit/s (default: 10)
+    public boolean mYdtunForceTcpRelay = false;  // force TURN TCP relay instead of UDP
+    public String mYdtunMaxFrameBudget = "";     // max frame budget in bytes (default: 50000)
+    public String mYdtunMaxFps = "";             // max adaptive FPS (default: 30)
+
+    // Networks to exclude from VPN routing when Telemost is active (comma-separated CIDRs)
+    public String mYdtunNetGateway = "";
 
     public boolean isSingBoxEnabled() { return mTunnelType == TunnelType.SINGBOX; }
     public boolean isYdtunEnabled() { return mTunnelType == TunnelType.YDTUN; }
