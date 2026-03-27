@@ -8,6 +8,7 @@ package de.blinkt.openvpn.core;
 import android.content.Context;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -71,8 +72,8 @@ public class YdtunProcess {
             } else if (conn.mYdtunLogLevel >= 2) {
                 cmd.add("-vv");
             }
-            cmd.add("--api-port");
-            cmd.add(String.valueOf(mApiPort));
+            cmd.add("--api-addr");
+            cmd.add("127.0.0.1:" + mApiPort);
             cmd.add("--mode");
             cmd.add("port-forward");
             cmd.add("--pf-listen");
@@ -125,6 +126,7 @@ public class YdtunProcess {
                             new InputStreamReader(mProcess.getInputStream(), StandardCharsets.UTF_8));
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        Log.i(TAG, line);
                         VpnStatus.logInfo("ydtun: " + line);
                     }
                 } catch (IOException e) {
