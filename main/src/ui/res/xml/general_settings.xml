@@ -24,12 +24,12 @@
 
 
         <CheckBoxPreference
-                android:defaultValue="false"
+                android:defaultValue="true"
                 android:disableDependentsState="true"
                 android:key="ovpn3"
                 android:singleLineTitle="false"
                 android:summaryOff="Use OpenVPN 2.x"
-                android:summaryOn="Use the C++ OpenVPN library (experimental)"
+                android:summaryOn="Use the C++ OpenVPN 3 library"
                 android:title="OpenVPN 3 Core" />
 
 
