@@ -143,11 +143,7 @@ public class ConfigParser {
     // ydtun/Telemost tunnel fields
     private String mYdtunTelemostUrls = "";
     private String mYdtunTunnelKey = "";
-    private String mYdtunTunnelId = "0";
-    private String mYdtunMaxBw = "";
     private boolean mYdtunForceTcpRelay = false;
-    private String mYdtunMaxFrameBudget = "";
-    private String mYdtunMaxFps = "";
     private String mYdtunNetGateway = "";
 
     static public void useEmbbedUserAuth(VpnProfile np, String inlinedata) {
@@ -1208,20 +1204,8 @@ public class ConfigParser {
                 case "telemost_tunnel_key":
                     mYdtunTunnelKey = value;
                     break;
-                case "telemost_tunnel_id":
-                    mYdtunTunnelId = value;
-                    break;
-                case "telemost_max_bw":
-                    mYdtunMaxBw = value;
-                    break;
                 case "telemost_force_tcp_relay":
                     mYdtunForceTcpRelay = "true".equalsIgnoreCase(value) || "1".equals(value);
-                    break;
-                case "telemost_max_frame_budget":
-                    mYdtunMaxFrameBudget = value;
-                    break;
-                case "telemost_max_fps":
-                    mYdtunMaxFps = value;
                     break;
                 case "telemost_net_gateway":
                     mYdtunNetGateway = value;
@@ -1241,11 +1225,7 @@ public class ConfigParser {
                 conn.mTunnelType = Connection.TunnelType.YDTUN;
             conn.mYdtunTelemostUrls = mYdtunTelemostUrls;
             conn.mYdtunTunnelKey = mYdtunTunnelKey;
-            conn.mYdtunTunnelId = mYdtunTunnelId;
-            conn.mYdtunMaxBw = mYdtunMaxBw;
             conn.mYdtunForceTcpRelay = mYdtunForceTcpRelay;
-            conn.mYdtunMaxFrameBudget = mYdtunMaxFrameBudget;
-            conn.mYdtunMaxFps = mYdtunMaxFps;
             conn.mYdtunNetGateway = mYdtunNetGateway;
         }
     }

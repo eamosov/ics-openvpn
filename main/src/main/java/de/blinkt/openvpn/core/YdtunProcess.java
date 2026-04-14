@@ -86,28 +86,8 @@ public class YdtunProcess {
                 cmd.add(conn.mYdtunTunnelKey);
             }
 
-            if (!TextUtils.isEmpty(conn.mYdtunTunnelId) && !"0".equals(conn.mYdtunTunnelId)) {
-                cmd.add("--tunnel-id");
-                cmd.add(conn.mYdtunTunnelId);
-            }
-
-            if (!TextUtils.isEmpty(conn.mYdtunMaxBw)) {
-                cmd.add("--max-bw");
-                cmd.add(conn.mYdtunMaxBw);
-            }
-
             if (conn.mYdtunForceTcpRelay) {
                 cmd.add("--force-tcp-relay");
-            }
-
-            if (!TextUtils.isEmpty(conn.mYdtunMaxFrameBudget)) {
-                cmd.add("--max-frame-budget");
-                cmd.add(conn.mYdtunMaxFrameBudget);
-            }
-
-            if (!TextUtils.isEmpty(conn.mYdtunMaxFps)) {
-                cmd.add("--max-fps");
-                cmd.add(conn.mYdtunMaxFps);
             }
 
             VpnStatus.logInfo("ydtun: starting on port " + mLocalPort);

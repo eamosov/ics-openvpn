@@ -38,11 +38,7 @@ public class Settings_Tunnel extends Settings_Fragment {
     // Ydtun fields
     private EditText mYdTelemostUrls;
     private EditText mYdTunnelKey;
-    private EditText mYdTunnelId;
-    private EditText mYdMaxBw;
     private SwitchMaterial mYdForceTcpRelay;
-    private EditText mYdMaxFrameBudget;
-    private EditText mYdMaxFps;
     private EditText mYdNetGateway;
     private Spinner mYdLogLevel;
 
@@ -64,11 +60,7 @@ public class Settings_Tunnel extends Settings_Fragment {
 
         mYdTelemostUrls = v.findViewById(R.id.yd_telemost_urls);
         mYdTunnelKey = v.findViewById(R.id.yd_tunnel_key);
-        mYdTunnelId = v.findViewById(R.id.yd_tunnel_id);
-        mYdMaxBw = v.findViewById(R.id.yd_max_bw);
         mYdForceTcpRelay = v.findViewById(R.id.yd_force_tcp_relay);
-        mYdMaxFrameBudget = v.findViewById(R.id.yd_max_frame_budget);
-        mYdMaxFps = v.findViewById(R.id.yd_max_fps);
         mYdNetGateway = v.findViewById(R.id.yd_net_gateway);
         mYdLogLevel = v.findViewById(R.id.yd_log_level);
 
@@ -119,11 +111,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         // Ydtun fields
         mYdTelemostUrls.setText(conn.mYdtunTelemostUrls);
         mYdTunnelKey.setText(conn.mYdtunTunnelKey);
-        mYdTunnelId.setText(conn.mYdtunTunnelId);
-        mYdMaxBw.setText(conn.mYdtunMaxBw);
         mYdForceTcpRelay.setChecked(conn.mYdtunForceTcpRelay);
-        mYdMaxFrameBudget.setText(conn.mYdtunMaxFrameBudget);
-        mYdMaxFps.setText(conn.mYdtunMaxFps);
         mYdNetGateway.setText(conn.mYdtunNetGateway);
         mYdLogLevel.setSelection(conn.mYdtunLogLevel);
 
@@ -154,11 +142,7 @@ public class Settings_Tunnel extends Settings_Fragment {
 
         String ydTelemostUrls = mYdTelemostUrls.getText().toString().trim();
         String ydTunnelKey = mYdTunnelKey.getText().toString().trim();
-        String ydTunnelId = mYdTunnelId.getText().toString().trim();
-        String ydMaxBw = mYdMaxBw.getText().toString().trim();
         boolean ydForceTcpRelay = mYdForceTcpRelay.isChecked();
-        String ydMaxFrameBudget = mYdMaxFrameBudget.getText().toString().trim();
-        String ydMaxFps = mYdMaxFps.getText().toString().trim();
         String ydNetGateway = mYdNetGateway.getText().toString().trim();
         int ydLogLevel = mYdLogLevel.getSelectedItemPosition();
 
@@ -175,11 +159,7 @@ public class Settings_Tunnel extends Settings_Fragment {
 
             conn.mYdtunTelemostUrls = ydTelemostUrls;
             conn.mYdtunTunnelKey = ydTunnelKey;
-            conn.mYdtunTunnelId = ydTunnelId;
-            conn.mYdtunMaxBw = ydMaxBw;
             conn.mYdtunForceTcpRelay = ydForceTcpRelay;
-            conn.mYdtunMaxFrameBudget = ydMaxFrameBudget;
-            conn.mYdtunMaxFps = ydMaxFps;
             conn.mYdtunNetGateway = ydNetGateway;
             conn.mYdtunLogLevel = ydLogLevel;
         }
