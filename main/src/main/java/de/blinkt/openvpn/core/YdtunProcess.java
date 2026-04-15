@@ -34,6 +34,7 @@ public class YdtunProcess {
     private int mApiPort;
     private Thread mLogThread;
     private volatile HttpURLConnection mKcpConnection;
+    private String mNetGateway;
 
 
     private static String getYdtunPath(Context context) {
@@ -54,6 +55,10 @@ public class YdtunProcess {
         }
     }
 
+    public String getNetGateway() {
+        return mNetGateway;
+    }
+
     /**
      * Start ydtun process in port-forward listen mode. Returns local port or -1 on failure.
      */
@@ -61,6 +66,7 @@ public class YdtunProcess {
         try {
             mLocalPort = findFreePort();
             mApiPort = findFreePort();
+            mNetGateway = conn.mYdtunNetGateway;
 
             String binaryPath = getYdtunPath(context);
 

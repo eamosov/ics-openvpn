@@ -1138,11 +1138,14 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         builder.setConfigureIntent(getGraphPendingIntent());
 
-        // Exclude telemost_net_gateway networks from VPN routing (only when Telemost tunnel is active)
-        if (mProfile.mConnections != null && mProfile.mConnections.length > 0) {
-            Connection ydConn = mProfile.mConnections[0];
-            if (ydConn.isYdtunEnabled() && ydConn.mYdtunNetGateway != null && !ydConn.mYdtunNetGateway.isEmpty()) {
-                for (String network : ydConn.mYdtunNetGateway.split(",")) {
+        // Exclude telemost_net_gateway networks from VPN routing (only when ydtun tunnel is active).
+        // Use mYdtunProcess (set during startCommand) instead of findYdtunConnection(mProfile)
+        // because the profile's connections may have been reloaded by the time openTun is called,
+        // losing the original tunnel type.
+        if (mYdtunProcess != null && mYdtunProcess.isRunning()) {
+            String netGateway = mYdtunProcess.getNetGateway();
+            if (netGateway != null && !netGateway.isEmpty()) {
+                for (String network : netGateway.split(",")) {
                     network = network.trim();
                     if (network.isEmpty()) continue;
                     try {

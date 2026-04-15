@@ -249,7 +249,11 @@ public class StatusFragment extends Fragment {
             HttpURLConnection conn = (HttpURLConnection) new URL(service.url).openConnection();
             conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
             conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            if (service.url.contains("tunnelblick.net")) {
+                conn.setRequestProperty("User-Agent", "OpenVPN ipInfoChecker: StatusCheck");
+            } else {
+                conn.setRequestProperty("User-Agent", "curl/7.0");
+            }
             conn.setInstanceFollowRedirects(true);
 
             int code = conn.getResponseCode();
