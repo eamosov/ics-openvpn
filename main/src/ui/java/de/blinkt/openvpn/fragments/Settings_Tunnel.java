@@ -14,6 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 
+import de.blinkt.openvpn.core.ProfileManager;
+
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import de.blinkt.openvpn.R;
@@ -163,5 +165,6 @@ public class Settings_Tunnel extends Settings_Fragment {
             conn.mYdtunNetGateway = ydNetGateway;
             conn.mYdtunLogLevel = ydLogLevel;
         }
+        ProfileManager.saveProfile(requireContext(), mProfile);
     }
 }

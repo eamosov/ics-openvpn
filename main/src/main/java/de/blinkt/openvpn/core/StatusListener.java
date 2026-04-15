@@ -70,7 +70,11 @@ public class StatusListener implements VpnStatus.LogListener, VpnStatus.ProfileN
         @Override
         public void notifyProfileVersionChanged(String uuid, int version) throws RemoteException {
             ProfileManager.notifyProfileVersionChanged(mContext, uuid, version);
+        }
 
+        @Override
+        public void updateYdtunStatus(boolean alive) throws RemoteException {
+            VpnStatus.setYdtunStatus(alive);
         }
     };
     private File mCacheDir;

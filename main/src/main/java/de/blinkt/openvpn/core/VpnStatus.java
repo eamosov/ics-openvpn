@@ -42,6 +42,7 @@ public class VpnStatus {
     private static HandlerThread mHandlerThread;
 
     private static String mLastConnectedVPNUUID;
+    private static Boolean mYdtunAlive = null;
     static boolean readFileLog =false;
     final static java.lang.Object readFileLock = new Object();
 
@@ -409,6 +410,37 @@ public class VpnStatus {
             sl.updateState(state, msg, resid, level, intent);
         }
         //newLogItem(new LogItem((LogLevel.DEBUG), String.format("New OpenVPN Status (%s->%s): %s",state,level.toString(),msg)));
+    }
+
+    public interface YdtunStatusListener {
+        void onYdtunStatusChanged(boolean alive);
+    }
+
+    private static final Vector<YdtunStatusListener> ydtunStatusListeners = new Vector<>();
+
+    public static void addYdtunStatusListener(YdtunStatusListener l) {
+        ydtunStatusListeners.add(l);
+    }
+
+    public static void removeYdtunStatusListener(YdtunStatusListener l) {
+        ydtunStatusListeners.remove(l);
+    }
+
+    public synchronized static void setYdtunStatus(Boolean alive) {
+        mYdtunAlive = alive;
+        if (alive != null) {
+            for (YdtunStatusListener l : ydtunStatusListeners) {
+                l.onYdtunStatusChanged(alive);
+            }
+        }
+        // Also trigger state refresh for UI update
+        for (StateListener sl : stateListener) {
+            sl.updateState(mLaststate, mLaststatemsg, mLastStateresid, mLastLevel, mLastIntent);
+        }
+    }
+
+    public static Boolean getYdtunAlive() {
+        return mYdtunAlive;
     }
 
     public static void logInfo(String message) {

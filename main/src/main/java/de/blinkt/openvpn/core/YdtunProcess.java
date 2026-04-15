@@ -211,6 +211,40 @@ public class YdtunProcess {
     }
 
     /**
+     * Quick non-blocking check of ydtun tunnel status via /status endpoint.
+     * Returns true if tunnel is alive, false otherwise.
+     */
+    public boolean checkAlive() {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("http://127.0.0.1:" + mApiPort + "/status");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(2000);
+            conn.setReadTimeout(2000);
+            conn.setRequestMethod("GET");
+
+            int code = conn.getResponseCode();
+            if (code != 200) return false;
+
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            reader.close();
+
+            String body = sb.toString();
+            return body.contains("\"alive\":true") || body.contains("\"alive\": true");
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    /**
      * Wait for ydtun KCP tunnel to become ready via REST API.
      * The /alive/kcp endpoint polls internally (200ms interval, 120s timeout).
      */

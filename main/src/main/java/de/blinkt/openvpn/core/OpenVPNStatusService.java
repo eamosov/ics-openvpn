@@ -24,7 +24,7 @@ import java.lang.ref.WeakReference;
  * Ensure to forward message from the backend process :openvpn to the frontend process via AIDL
  */
 
-public class OpenVPNStatusService extends Service implements VpnStatus.LogListener, VpnStatus.ByteCountListener, VpnStatus.StateListener, VpnStatus.ProfileNotifyListener {
+public class OpenVPNStatusService extends Service implements VpnStatus.LogListener, VpnStatus.ByteCountListener, VpnStatus.StateListener, VpnStatus.ProfileNotifyListener, VpnStatus.YdtunStatusListener {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -42,6 +42,7 @@ public class OpenVPNStatusService extends Service implements VpnStatus.LogListen
         VpnStatus.addByteCountListener(this);
         VpnStatus.addStateListener(this);
         VpnStatus.addProfileStateListener(this);
+        VpnStatus.addYdtunStatusListener(this);
         mHandler.setService(this);
     }
 
@@ -53,6 +54,7 @@ public class OpenVPNStatusService extends Service implements VpnStatus.LogListen
         VpnStatus.removeByteCountListener(this);
         VpnStatus.removeStateListener(this);
         VpnStatus.removeProfileStateListener(this);
+        VpnStatus.removeYdtunStatusListener(this);
         mCallbacks.kill();
 
     }
@@ -183,6 +185,12 @@ public class OpenVPNStatusService extends Service implements VpnStatus.LogListen
         msg.sendToTarget();
     }
 
+    @Override
+    public void onYdtunStatusChanged(boolean alive) {
+        Message msg = mHandler.obtainMessage(SEND_YDTUN_STATUS, alive ? 1 : 0, 0);
+        msg.sendToTarget();
+    }
+
     private static final OpenVPNStatusHandler mHandler = new OpenVPNStatusHandler();
 
     private static final int SEND_NEW_LOGITEM = 100;
@@ -190,6 +198,7 @@ public class OpenVPNStatusService extends Service implements VpnStatus.LogListen
     private static final int SEND_NEW_BYTECOUNT = 102;
     private static final int SEND_NEW_CONNECTED_VPN = 103;
     private static final int SEND_NEW_PROFILE_VERSION = 104;
+    private static final int SEND_YDTUN_STATUS = 105;
 
     private static class OpenVPNStatusHandler extends Handler {
         WeakReference<OpenVPNStatusService> service = null;
@@ -230,6 +239,11 @@ public class OpenVPNStatusService extends Service implements VpnStatus.LogListen
                         case SEND_NEW_PROFILE_VERSION:
                             Pair<String, Integer> profileupdate =  (Pair<String, Integer>) msg.obj;
                             broadcastItem.notifyProfileVersionChanged(profileupdate.first, profileupdate.second);
+                            break;
+
+                        case SEND_YDTUN_STATUS:
+                            broadcastItem.updateYdtunStatus(msg.arg1 == 1);
+                            break;
                     }
                 } catch (RemoteException e) {
                     // The RemoteCallbackList will take care of removing

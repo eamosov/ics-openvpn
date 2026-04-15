@@ -122,6 +122,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     private OpenVPNManagement mManagement;
     private SingBoxProcess mSingBoxProcess;
     private YdtunProcess mYdtunProcess;
+    private Thread mYdtunStatusThread;
     private final IBinder mBinder = new IOpenVPNServiceInternal.Stub() {
 
         @Override
@@ -601,6 +602,21 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 startReason = "(unknown)";
             // Try for 10s to get current version of the profile
             vpnProfile = ProfileManager.get(this, profileUUID, profileVersion, 100);
+            // Apply connections from intent — needed when VPN service runs in a different
+            // Android user (e.g. Samsung Secure Folder user 151) that has a stale profile copy.
+            // The intent crosses user boundary via IPC, carrying the fresh connections from user 0.
+            if (vpnProfile != null && intent.hasExtra(VpnProfile.EXTRA_CONNECTIONS)) {
+                try {
+                    Connection[] conns = (Connection[]) intent.getSerializableExtra(VpnProfile.EXTRA_CONNECTIONS);
+                    if (conns != null && conns.length > 0) {
+                        vpnProfile.mConnections = conns;
+                        // Save updated profile so future restarts (null intent) use correct data
+                        ProfileManager.saveProfile(this, vpnProfile);
+                    }
+                } catch (Exception e) {
+                    Log.w("Ydtun", "fetchVPNProfile: failed to deserialize connections from intent", e);
+                }
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
                 updateShortCutUsage(vpnProfile);
             }
@@ -673,12 +689,15 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
 
         boolean noReplaceRequested =  (intent != null) && intent.getBooleanExtra(EXTRA_DO_NOT_REPLACE_RUNNING_VPN, false);
 
+        // If intent carries fresh connections (from UI process), always allow replacement
+        // to pick up tunnel type changes across work profile boundary
+        boolean hasConnectionsUpdate = intent != null && intent.hasExtra(VpnProfile.EXTRA_CONNECTIONS);
 
         /* we get an empty start request or explicitly get told to not replace the VPN then ignore
          * a start request. This avoids OnBootreciver, Always and user quickly clicking to have
          * weird race conditions
          */
-        if (mProfile != null && mProfile == vp && (intent == null || noReplaceRequested))
+        if (mProfile != null && mProfile == vp && (intent == null || noReplaceRequested) && !hasConnectionsUpdate)
         {
             /* we do not want to replace the running VPN */
             VpnStatus.logInfo(R.string.ignore_vpn_start_request, mProfile.getName());
@@ -755,6 +774,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 return;
             }
             VpnStatus.logInfo("ydtun: KCP tunnel ready");
+            startYdtunStatusPolling();
         }
 
         // Start a new session by creating a new thread.
@@ -874,7 +894,38 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
                 || (mSingBoxProcess != null && mSingBoxProcess.isRunning());
     }
 
+    private void startYdtunStatusPolling() {
+        stopYdtunStatusPolling();
+        VpnStatus.setYdtunStatus(true); // just established KCP
+        mYdtunStatusThread = new Thread(() -> {
+            Boolean lastStatus = true;
+            while (!Thread.interrupted() && mYdtunProcess != null && mYdtunProcess.isRunning()) {
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    break;
+                }
+                boolean alive = mYdtunProcess.checkAlive();
+                if (lastStatus == null || alive != lastStatus) {
+                    lastStatus = alive;
+                    VpnStatus.setYdtunStatus(alive);
+                }
+            }
+        }, "YdtunStatusPoll");
+        mYdtunStatusThread.setDaemon(true);
+        mYdtunStatusThread.start();
+    }
+
+    private void stopYdtunStatusPolling() {
+        if (mYdtunStatusThread != null) {
+            mYdtunStatusThread.interrupt();
+            mYdtunStatusThread = null;
+        }
+        VpnStatus.setYdtunStatus(null);
+    }
+
     private void stopYdtun() {
+        stopYdtunStatusPolling();
         if (mYdtunProcess != null) {
             mYdtunProcess.stop();
             mYdtunProcess = null;

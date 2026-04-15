@@ -602,12 +602,28 @@ class VPNProfileList : ListFragment(), View.OnClickListener, StateListener {
 
             // Show proxy badge next to profile name
             val tunnelType = profile.mConnections?.firstOrNull { it.mEnabled }?.mTunnelType
+            val isActive = VpnStatus.isVPNActive()
+                    && profile.getUUIDString() == VpnStatus.getLastConnectedVPNProfile()
             if (tunnelType == Connection.TunnelType.SINGBOX || tunnelType == Connection.TunnelType.YDTUN) {
-                val label = if (tunnelType == Connection.TunnelType.SINGBOX) "[sb]" else "[tm]"
+                val label = if (tunnelType == Connection.TunnelType.YDTUN) {
+                    val ydtunAlive = VpnStatus.getYdtunAlive()
+                    if (isActive && ydtunAlive != null) {
+                        if (ydtunAlive) "[tm:alive]" else "[tm:dead]"
+                    } else {
+                        "[tm]"
+                    }
+                } else {
+                    "[sb]"
+                }
                 proxyBadge.text = label
-                val isActive = VpnStatus.isVPNActive()
-                        && profile.getUUIDString() == VpnStatus.getLastConnectedVPNProfile()
-                val color = if (isActive) 0xFF4CAF50.toInt() else 0xFF9E9E9E.toInt()
+                val ydtunAlive = VpnStatus.getYdtunAlive()
+                val color = if (!isActive) {
+                    0xFF9E9E9E.toInt()
+                } else if (tunnelType == Connection.TunnelType.YDTUN && ydtunAlive == false) {
+                    0xFFF44336.toInt() // red for dead
+                } else {
+                    0xFF4CAF50.toInt() // green
+                }
                 proxyBadge.setTextColor(color)
                 proxyBadge.visibility = View.VISIBLE
             } else {

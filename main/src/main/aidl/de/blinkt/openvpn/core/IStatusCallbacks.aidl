@@ -24,4 +24,6 @@ interface IStatusCallbacks {
     oneway void connectedVPN(String uuid);
 
     oneway void notifyProfileVersionChanged(String uuid, int profileVersion);
+
+    oneway void updateYdtunStatus(boolean alive);
 }
