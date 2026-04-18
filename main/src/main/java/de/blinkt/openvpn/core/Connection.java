@@ -85,7 +85,7 @@ public class Connection implements Serializable, Cloneable {
 
         // Server Address — tunnel override
         if (isSingBoxEnabled() && singBoxLocalPort > 0) {
-            cfg += "remote 127.0.0.1 " + singBoxLocalPort + " tcp-client\n";
+            cfg += "remote 127.0.0.1 " + singBoxLocalPort + (mUseUdp ? " udp\n" : " tcp-client\n");
         } else if (isYdtunEnabled() && ydtunLocalPort > 0) {
             cfg += "remote 127.0.0.1 " + ydtunLocalPort + " tcp-client\n";
         } else {
@@ -114,7 +114,12 @@ public class Connection implements Serializable, Cloneable {
         }
 
         if (!TextUtils.isEmpty(mCustomConfiguration) && mUseCustomConfig) {
-            cfg += mCustomConfiguration;
+            String custom = mCustomConfiguration;
+            if (isYdtunEnabled() && ydtunLocalPort > 0) {
+                // telemost/ydtun uses reliable TCP tunnel, OpenVPN fragment is incompatible
+                custom = custom.replaceAll("(?m)^[ \\t]*fragment\\b.*$\\n?", "");
+            }
+            cfg += custom;
             cfg += "\n";
         }
 

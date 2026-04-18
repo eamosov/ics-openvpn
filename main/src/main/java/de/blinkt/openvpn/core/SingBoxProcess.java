@@ -13,9 +13,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
@@ -61,7 +59,7 @@ public class SingBoxProcess {
                 "      \"type\": \"direct\",\n" +
                 "      \"listen\": \"127.0.0.1\",\n" +
                 "      \"listen_port\": %d,\n" +
-                "      \"network\": \"tcp\",\n" +
+                "      \"network\": \"%s\",\n" +
                 "      \"override_address\": \"%s\",\n" +
                 "      \"override_port\": %d\n" +
                 "    }\n" +
@@ -90,6 +88,7 @@ public class SingBoxProcess {
                 "  ]\n" +
                 "}",
                 localPort,
+                conn.mUseUdp ? "udp" : "tcp",
                 conn.mSingBoxOverrideAddress,
                 overridePort,
                 conn.mServerName,
@@ -158,7 +157,7 @@ public class SingBoxProcess {
             mLogThread.start();
 
             // Wait for port to become available
-            if (!waitForPort(mLocalPort, START_TIMEOUT_MS)) {
+            if (!waitForPort(mLocalPort, START_TIMEOUT_MS, conn.mUseUdp)) {
                 VpnStatus.logError("sing-box: failed to start within timeout");
                 stop();
                 return -1;
@@ -175,19 +174,13 @@ public class SingBoxProcess {
     }
 
     /**
-     * Wait for a TCP port to become available.
+     * Wait until sing-box forwards an OpenVPN handshake end-to-end.
      */
-    private boolean waitForPort(int port, int timeoutMs) {
+    private boolean waitForPort(int port, int timeoutMs, boolean udp) {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
-            try {
-                Socket socket = new Socket();
-                socket.connect(new InetSocketAddress("127.0.0.1", port), 500);
-                socket.close();
-                return true;
-            } catch (IOException e) {
-                // Port not ready yet
-            }
+            boolean ok = udp ? OpenVpnProbe.probeUdp(port, 1000) : OpenVpnProbe.probeTcp(port, 2000);
+            if (ok) return true;
             try {
                 Thread.sleep(PORT_CHECK_INTERVAL_MS);
             } catch (InterruptedException e) {

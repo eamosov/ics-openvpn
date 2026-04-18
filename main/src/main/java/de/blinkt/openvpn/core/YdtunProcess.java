@@ -142,13 +142,8 @@ public class YdtunProcess {
     private boolean waitForPort(int port, int timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
-            try {
-                Socket socket = new Socket();
-                socket.connect(new InetSocketAddress("127.0.0.1", port), 500);
-                socket.close();
+            if (OpenVpnProbe.probeTcp(port, 2000)) {
                 return true;
-            } catch (IOException e) {
-                // Port not ready yet
             }
             try {
                 Thread.sleep(PORT_CHECK_INTERVAL_MS);
