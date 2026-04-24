@@ -47,7 +47,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDirs("src/main/assets", "build/ovpnassets")
-            jniLibs.srcDirs("${buildDir}/singbox/jniLibs", "${buildDir}/ydtun/jniLibs")
+            jniLibs.srcDirs("${buildDir}/openvpn/jniLibs")
         }
 
         create("ui") {
@@ -147,9 +147,8 @@ android {
         abi {
             isEnable = true
             reset()
-            val abis = (findProperty("buildAbis") as? String)?.split(",") ?: listOf("arm64-v8a")
-            include(*abis.toTypedArray())
-            isUniversalApk = abis.size > 1
+            include("arm64-v8a")
+            isUniversalApk = false
         }
     }
 
@@ -225,133 +224,86 @@ android.applicationVariants.all(object : Action<ApplicationVariant> {
     }
 })
 
-// sing-box build tasks
-val singboxSrcDir = file("src/main/go/sing-box")
-val singboxOutputDir = file("${buildDir}/singbox/jniLibs")
-
-data class SingBoxTarget(val goarch: String, val ccPrefix: String)
-val allSingboxTargets = mapOf(
-    "arm64-v8a"   to SingBoxTarget("arm64", "aarch64-linux-android21"),
-    "armeabi-v7a" to SingBoxTarget("arm",   "armv7a-linux-androideabi21"),
-    "x86_64"      to SingBoxTarget("amd64", "x86_64-linux-android21"),
-    "x86"         to SingBoxTarget("386",   "i686-linux-android21")
-)
-val buildAbis = (findProperty("buildAbis") as? String)?.split(",") ?: listOf("arm64-v8a")
-val singboxTargets = allSingboxTargets.filterKeys { it in buildAbis }
-
-var gocmd = "go"
-if (file("/opt/homebrew/bin/go").exists())
-    gocmd = "/opt/homebrew/bin/go"
-else if (file("/usr/local/go/bin/go").exists())
-    gocmd = "/usr/local/go/bin/go"
-
 val ndkDir = android.ndkDirectory
-val ndkHostTag = if (org.gradle.internal.os.OperatingSystem.current().isMacOsX) {
-    if (System.getProperty("os.arch") == "aarch64" || System.getProperty("os.arch") == "arm64") "darwin-x86_64" else "darwin-x86_64"
-} else {
-    "linux-x86_64"
-}
-val ndkToolchainBin = File(ndkDir, "toolchains/llvm/prebuilt/${ndkHostTag}/bin")
-
-singboxTargets.forEach { (abi, target) ->
-    tasks.register<Exec>("buildSingBox_${abi}") {
-        val outputDir = file("${singboxOutputDir}/${abi}")
-        val outputFile = file("${outputDir}/libsingbox.so")
-        val cc = File(ndkToolchainBin, "${target.ccPrefix}-clang")
-
-        workingDir = singboxSrcDir
-        environment("GOOS", "android")
-        environment("GOARCH", target.goarch)
-        environment("CGO_ENABLED", "1")
-        environment("CC", cc.absolutePath)
-        commandLine(gocmd, "build",
-            "-tags", "with_utls",
-            "-o", outputFile.absolutePath,
-            "-trimpath",
-            "-ldflags", "-s -w",
-            "./cmd/sing-box")
-
-        doFirst {
-            mkdir(outputDir)
-        }
-
-        inputs.files(file("${singboxSrcDir}/go.mod"), file("${singboxSrcDir}/go.sum"))
-        inputs.dir(file("${singboxSrcDir}/cmd"))
-        outputs.file(outputFile)
-    }
-}
-
-tasks.register("buildSingBox") {
-    description = "Build sing-box for all Android ABIs"
-    singboxTargets.keys.forEach { abi ->
-        dependsOn("buildSingBox_${abi}")
-    }
-}
-
-// --- ydtun (Rust) cross-compilation for Android ---
-
-val ydtunSrcDir = file(findProperty("ydtunSrcDir") ?: "src/main/rust/ydtun")
-val ydtunOutputDir = file("${buildDir}/ydtun/jniLibs")
-
-data class YdtunTarget(val rustTarget: String, val ccPrefix: String)
-val allYdtunTargets = mapOf(
-    "arm64-v8a"   to YdtunTarget("aarch64-linux-android", "aarch64-linux-android21"),
-    "armeabi-v7a" to YdtunTarget("armv7-linux-androideabi", "armv7a-linux-androideabi21"),
-    "x86_64"      to YdtunTarget("x86_64-linux-android", "x86_64-linux-android21"),
-    "x86"         to YdtunTarget("i686-linux-android", "i686-linux-android21")
+val openVpnAbi = "arm64-v8a"
+val openVpnSrcDir = file("src/main/cpp/openvpn")
+val openVpnRawOutputDir = file("${buildDir}/openvpn/artifacts")
+val openVpnRawAbiOutputDir = file("${openVpnRawOutputDir}/${openVpnAbi}")
+val openVpnJniLibsDir = file("${buildDir}/openvpn/jniLibs")
+val openVpnJniLibsAbiDir = file("${openVpnJniLibsDir}/${openVpnAbi}")
+val openVpnAssetDir = file("${buildDir}/ovpnassets")
+val openVpnExecutableAsset = file("${openVpnAssetDir}/pie_openvpn.${openVpnAbi}")
+val openVpnNativeLibraries = listOf(
+    "libopenvpn.so",
+    "libovpnexec.so",
+    "libsingbox.so",
+    "libydtun.so",
+    "openvpn-down-root.so",
+    "openvpn-plugin-down-root.so"
 )
-val ydtunTargets = allYdtunTargets.filterKeys { it in buildAbis }
+val openVpnAndroidArtifacts = openVpnNativeLibraries + listOf(
+    "pie_openvpn.${openVpnAbi}"
+)
 
-val vpxLibDir = file(findProperty("vpxLibDir") ?: "src/main/rust/vpx-android")
+val buildOpenVpnAndroid = tasks.register<Exec>("buildOpenVpnAndroid") {
+    description = "Build OpenVPN Android artifacts for arm64-v8a"
+    workingDir = openVpnSrcDir
+    commandLine(
+        "bash",
+        file("${openVpnSrcDir}/build.sh").absolutePath,
+        "android",
+        "--abi", openVpnAbi,
+        "--ndk", ndkDir.absolutePath,
+        "--out-dir", openVpnRawOutputDir.absolutePath
+    )
 
-ydtunTargets.forEach { (abi, target) ->
-    tasks.register<Exec>("buildYdtun_${abi}") {
-        val outputDir = file("${ydtunOutputDir}/${abi}")
-        val outputFile = file("${outputDir}/libydtun.so")
-        val cc = File(ndkToolchainBin, "${target.ccPrefix}-clang")
-        val ar = File(ndkToolchainBin, "llvm-ar")
-        val linkerEnvKey = "CARGO_TARGET_${target.rustTarget.uppercase().replace('-', '_')}_LINKER"
-
-        workingDir = ydtunSrcDir
-        environment("CC", cc.absolutePath)
-        environment("AR", ar.absolutePath)
-        environment(linkerEnvKey, cc.absolutePath)
-        environment("VPX_LIB_DIR", file("${vpxLibDir}/${abi}").absolutePath)
-        environment("VPX_STATIC", "1")
-        commandLine("cargo", "build",
-            "--target", target.rustTarget,
-            "--release",
-            "--no-default-features",
-            "--features", "port-forward",
-            "--bin", "ydtun")
-
-        doLast {
-            mkdir(outputDir)
-            val builtBinary = file("${ydtunSrcDir}/target/${target.rustTarget}/release/ydtun")
-            copy {
-                from(builtBinary)
-                into(outputDir)
-                rename("ydtun", "libydtun.so")
-            }
-        }
-
-        inputs.files(file("${ydtunSrcDir}/Cargo.toml"), file("${ydtunSrcDir}/Cargo.lock"))
-        inputs.dir(file("${ydtunSrcDir}/src"))
-        outputs.file(outputFile)
+    doFirst {
+        mkdir(openVpnRawAbiOutputDir)
+        mkdir(openVpnJniLibsAbiDir)
+        mkdir(openVpnAssetDir)
     }
+
+    doLast {
+        copy {
+            from(openVpnNativeLibraries.map { file("${openVpnRawAbiOutputDir}/${it}") })
+            into(openVpnJniLibsAbiDir)
+        }
+        copy {
+            from(file("${openVpnRawAbiOutputDir}/pie_openvpn.${openVpnAbi}"))
+            into(openVpnAssetDir)
+        }
+    }
+
+    inputs.file(file("${openVpnSrcDir}/build.sh"))
+    inputs.file(file("${openVpnSrcDir}/scripts/build-android.sh"))
+    outputs.files(openVpnAndroidArtifacts.map { file("${openVpnRawAbiOutputDir}/${it}") })
+    outputs.files(openVpnNativeLibraries.map { file("${openVpnJniLibsAbiDir}/${it}") })
+    outputs.file(openVpnExecutableAsset)
+    outputs.upToDateWhen { false }
 }
 
-tasks.register("buildYdtun") {
-    description = "Build ydtun for all Android ABIs"
-    ydtunTargets.keys.forEach { abi ->
-        dependsOn("buildYdtun_${abi}")
-    }
+tasks.register<Exec>("resetOpenVpnAndroidVendorOpenvpn") {
+    description = "Reset build-time OpenVPN vendor patching"
+    commandLine(
+        "git",
+        "-C", openVpnSrcDir.absolutePath,
+        "submodule", "update", "--init", "--force", "vendor/openvpn"
+    )
+}
+
+buildOpenVpnAndroid.configure {
+    finalizedBy("resetOpenVpnAndroidVendorOpenvpn")
 }
 
 afterEvaluate {
     tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
-        dependsOn("buildSingBox")
-        dependsOn("buildYdtun")
+        dependsOn("buildOpenVpnAndroid")
+    }
+    tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
+        dependsOn("buildOpenVpnAndroid")
+    }
+    tasks.matching { it.name.contains("lintVital", ignoreCase = true) }.configureEach {
+        dependsOn("buildOpenVpnAndroid")
     }
 }
 

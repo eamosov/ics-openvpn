@@ -141,7 +141,7 @@ public class ConfigParser {
     private String mSingBoxTlsShortId = "";
 
     // ydtun/Telemost tunnel fields
-    private String mYdtunTelemostUrls = "";
+    private String mYdtunTelemostCcUrl = "";
     private String mYdtunTunnelKey = "";
     private boolean mYdtunForceTcpRelay = false;
     private String mYdtunNetGateway = "";
@@ -1150,7 +1150,7 @@ public class ConfigParser {
     private void parseYdtunOptions() {
         Set<String> keys = new LinkedHashSet<>(Arrays.asList(
                 "telemost_enable",
-                "telemost_urls",
+                "telemost_cc_url",
                 "telemost_tunnel_key",
                 "telemost_tunnel_id",
                 "telemost_max_bw",
@@ -1198,8 +1198,8 @@ public class ConfigParser {
                     if ("true".equalsIgnoreCase(value) || "1".equals(value))
                         mTunnelType = Connection.TunnelType.YDTUN;
                     break;
-                case "telemost_urls":
-                    mYdtunTelemostUrls = value;
+                case "telemost_cc_url":
+                    mYdtunTelemostCcUrl = value;
                     break;
                 case "telemost_tunnel_key":
                     mYdtunTunnelKey = value;
@@ -1217,13 +1217,13 @@ public class ConfigParser {
     private void applyYdtunToConnections(Connection[] connections) {
         // Always apply telemost fields so they're available when user switches
         // tunnel mode in UI. TunnelType is set separately.
-        boolean hasYdtunFields = !mYdtunTelemostUrls.isEmpty() || !mYdtunTunnelKey.isEmpty();
+        boolean hasYdtunFields = !mYdtunTelemostCcUrl.isEmpty() || !mYdtunTunnelKey.isEmpty();
         if (!hasYdtunFields && mTunnelType != Connection.TunnelType.YDTUN)
             return;
         for (Connection conn : connections) {
             if (mTunnelType == Connection.TunnelType.YDTUN)
                 conn.mTunnelType = Connection.TunnelType.YDTUN;
-            conn.mYdtunTelemostUrls = mYdtunTelemostUrls;
+            conn.mYdtunTelemostCcUrl = mYdtunTelemostCcUrl;
             conn.mYdtunTunnelKey = mYdtunTunnelKey;
             conn.mYdtunForceTcpRelay = mYdtunForceTcpRelay;
             conn.mYdtunNetGateway = mYdtunNetGateway;
@@ -1344,7 +1344,6 @@ public class ConfigParser {
     }
 
 }
-
 
 
 

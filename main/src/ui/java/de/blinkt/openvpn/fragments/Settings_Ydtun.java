@@ -23,7 +23,7 @@ public class Settings_Ydtun extends Settings_Fragment {
 
     private SwitchMaterial mYdtunEnable;
     private LinearLayout mSettingsGroup;
-    private EditText mTelemostUrls;
+    private EditText mTelemostCcUrl;
     private EditText mTunnelKey;
     private SwitchMaterial mForceTcpRelay;
     private EditText mNetGateway;
@@ -35,7 +35,7 @@ public class Settings_Ydtun extends Settings_Fragment {
 
         mYdtunEnable = v.findViewById(R.id.yd_enable);
         mSettingsGroup = v.findViewById(R.id.yd_settings_group);
-        mTelemostUrls = v.findViewById(R.id.yd_telemost_urls);
+        mTelemostCcUrl = v.findViewById(R.id.yd_telemost_cc_url);
         mTunnelKey = v.findViewById(R.id.yd_tunnel_key);
         mForceTcpRelay = v.findViewById(R.id.yd_force_tcp_relay);
         mNetGateway = v.findViewById(R.id.yd_net_gateway);
@@ -64,7 +64,7 @@ public class Settings_Ydtun extends Settings_Fragment {
         mYdtunEnable.setChecked(enabled);
         mSettingsGroup.setVisibility(enabled ? View.VISIBLE : View.GONE);
 
-        mTelemostUrls.setText(conn.mYdtunTelemostUrls);
+        mTelemostCcUrl.setText(conn.mYdtunTelemostCcUrl);
         mTunnelKey.setText(conn.mYdtunTunnelKey);
         mForceTcpRelay.setChecked(conn.mYdtunForceTcpRelay);
         mNetGateway.setText(conn.mYdtunNetGateway);
@@ -77,7 +77,7 @@ public class Settings_Ydtun extends Settings_Fragment {
             return;
 
         boolean enabled = mYdtunEnable.isChecked();
-        String telemostUrls = mTelemostUrls.getText().toString().trim();
+        String telemostCcUrl = mTelemostCcUrl.getText().toString().trim();
         String tunnelKey = mTunnelKey.getText().toString().trim();
         boolean forceTcpRelay = mForceTcpRelay.isChecked();
         String netGateway = mNetGateway.getText().toString().trim();
@@ -85,7 +85,7 @@ public class Settings_Ydtun extends Settings_Fragment {
 
         for (Connection conn : mProfile.mConnections) {
             conn.mTunnelType = enabled ? TunnelType.YDTUN : TunnelType.NONE;
-            conn.mYdtunTelemostUrls = telemostUrls;
+            conn.mYdtunTelemostCcUrl = telemostCcUrl;
             conn.mYdtunTunnelKey = tunnelKey;
             conn.mYdtunForceTcpRelay = forceTcpRelay;
             conn.mYdtunNetGateway = netGateway;

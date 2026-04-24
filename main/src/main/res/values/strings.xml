@@ -318,8 +318,8 @@
     <string name="ydtun_tab">Telemost</string>
     <string name="ydtun_enable">Enable Telemost tunnel</string>
     <string name="ydtun_summary">Route OpenVPN traffic through WebRTC/Telemost tunnel</string>
-    <string name="ydtun_telemost_urls">Telemost URLs</string>
-    <string name="ydtun_telemost_urls_hint">Meeting URL(s), comma-separated</string>
+    <string name="ydtun_telemost_cc_url">Telemost CC URL</string>
+    <string name="ydtun_telemost_cc_url_hint">Control channel URL</string>
     <string name="ydtun_tunnel_key">Tunnel Key</string>
     <string name="ydtun_tunnel_key_hint">Encryption key (hex or passphrase)</string>
     <string name="ydtun_force_tcp_relay">Force TCP relay</string>
@@ -493,6 +493,7 @@
     <string name="Use_no_proxy">None</string>
     <string name="tor_orbot">Tor (Orbot)</string>
     <string name="openvpn3_socksproxy">OpenVPN 3 C++ implementation does not support connecting via Socks proxy</string>
+    <string name="openvpn3_tunnel_unsupported">OpenVPN 3 does not support sing-box or Telemost tunnels. Switch to OpenVPN 2.x to use this tunnel.</string>
     <string name="no_orbotfound">Orbot application cannot be found. Please install Orbot or use manual Socks v5 integration.</string>
     <string name="faq_remote_api_title">Remote API</string>
     <string name="faq_remote_api">OpenVPN for Android supports two remote APIs, a sophisticated API using AIDL (remoteEXample in the git repository) and a simple one using Intents. &lt;p>Examples using adb shell and the intents. Replace profilname with your profile name&lt;p>&lt;p> adb shell am start-activity -a android.intent.action.MAIN de.blinkt.openvpn/.api.DisconnectVPN&lt;p> adb shell am start-activity -a android.intent.action.MAIN -e de.blinkt.openvpn.api.profileName Blinkt de.blinkt.openvpn/.api.ConnectVPN</string>

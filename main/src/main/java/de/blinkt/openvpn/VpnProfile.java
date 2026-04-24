@@ -231,7 +231,7 @@ public class VpnProfile implements Serializable, Cloneable {
 
     public static boolean doUseOpenVPN3(Context c) {
         SharedPreferences prefs = Preferences.getDefaultSharedPreferences(c);
-        boolean useOpenVPN3 = prefs.getBoolean("ovpn3", true);
+        boolean useOpenVPN3 = prefs.getBoolean("ovpn3", false);
         if (!BuildConfig.openvpn3)
             useOpenVPN3 = false;
         return useOpenVPN3;
@@ -1087,6 +1087,8 @@ public class VpnProfile implements Serializable, Cloneable {
             for (Connection conn : mConnections) {
                 if (conn.mProxyType == Connection.ProxyType.ORBOT || conn.mProxyType == Connection.ProxyType.SOCKS5)
                     return R.string.openvpn3_socksproxy;
+                if (conn.isSingBoxEnabled() || conn.isYdtunEnabled())
+                    return R.string.openvpn3_tunnel_unsupported;
             }
         }
         for (Connection c : mConnections) {
@@ -1431,7 +1433,6 @@ public class VpnProfile implements Serializable, Cloneable {
         }
     }
 }
-
 
 
 

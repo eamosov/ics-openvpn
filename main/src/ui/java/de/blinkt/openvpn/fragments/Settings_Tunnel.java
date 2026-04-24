@@ -38,7 +38,7 @@ public class Settings_Tunnel extends Settings_Fragment {
     private EditText mSbTlsShortId;
 
     // Ydtun fields
-    private EditText mYdTelemostUrls;
+    private EditText mYdTelemostCcUrl;
     private EditText mYdTunnelKey;
     private SwitchMaterial mYdForceTcpRelay;
     private EditText mYdNetGateway;
@@ -60,7 +60,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         mSbTlsPublicKey = v.findViewById(R.id.sb_tls_public_key);
         mSbTlsShortId = v.findViewById(R.id.sb_tls_short_id);
 
-        mYdTelemostUrls = v.findViewById(R.id.yd_telemost_urls);
+        mYdTelemostCcUrl = v.findViewById(R.id.yd_telemost_cc_url);
         mYdTunnelKey = v.findViewById(R.id.yd_tunnel_key);
         mYdForceTcpRelay = v.findViewById(R.id.yd_force_tcp_relay);
         mYdNetGateway = v.findViewById(R.id.yd_net_gateway);
@@ -111,7 +111,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         mSbTlsShortId.setText(conn.mSingBoxTlsShortId);
 
         // Ydtun fields
-        mYdTelemostUrls.setText(conn.mYdtunTelemostUrls);
+        mYdTelemostCcUrl.setText(conn.mYdtunTelemostCcUrl);
         mYdTunnelKey.setText(conn.mYdtunTunnelKey);
         mYdForceTcpRelay.setChecked(conn.mYdtunForceTcpRelay);
         mYdNetGateway.setText(conn.mYdtunNetGateway);
@@ -142,7 +142,7 @@ public class Settings_Tunnel extends Settings_Fragment {
         String sbTlsPublicKey = mSbTlsPublicKey.getText().toString().trim();
         String sbTlsShortId = mSbTlsShortId.getText().toString().trim();
 
-        String ydTelemostUrls = mYdTelemostUrls.getText().toString().trim();
+        String ydTelemostCcUrl = mYdTelemostCcUrl.getText().toString().trim();
         String ydTunnelKey = mYdTunnelKey.getText().toString().trim();
         boolean ydForceTcpRelay = mYdForceTcpRelay.isChecked();
         String ydNetGateway = mYdNetGateway.getText().toString().trim();
@@ -159,7 +159,7 @@ public class Settings_Tunnel extends Settings_Fragment {
             conn.mSingBoxTlsPublicKey = sbTlsPublicKey;
             conn.mSingBoxTlsShortId = sbTlsShortId;
 
-            conn.mYdtunTelemostUrls = ydTelemostUrls;
+            conn.mYdtunTelemostCcUrl = ydTelemostCcUrl;
             conn.mYdtunTunnelKey = ydTunnelKey;
             conn.mYdtunForceTcpRelay = ydForceTcpRelay;
             conn.mYdtunNetGateway = ydNetGateway;

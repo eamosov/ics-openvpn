@@ -21,12 +21,13 @@ import de.blinkt.openvpn.VpnProfile;
 
 public class VPNLaunchHelper {
     private static final String MINIPIEVPN = "pie_openvpn";
+    private static final String OVPN_EXEC_LIBRARY = "libovpnexec.so";
 
     private static String writeMiniVPN(Context context) {
         String nativeAPI = NativeUtils.getNativeAPI();
         /* Q does not allow executing binaries written in temp directory anymore */
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-            return new File(context.getApplicationInfo().nativeLibraryDir, "libovpnexec.so").getPath();
+            return new File(context.getApplicationInfo().nativeLibraryDir, OVPN_EXEC_LIBRARY).getPath();
 
         String[] abis = Build.SUPPORTED_ABIS;
 

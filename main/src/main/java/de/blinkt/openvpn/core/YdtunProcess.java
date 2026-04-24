@@ -84,8 +84,8 @@ public class YdtunProcess {
             cmd.add("port-forward");
             cmd.add("--pf-listen");
             cmd.add("127.0.0.1:" + mLocalPort);
-            cmd.add("--telemost-urls");
-            cmd.add(conn.mYdtunTelemostUrls);
+            cmd.add("--cc-url");
+            cmd.add(conn.mYdtunTelemostCcUrl);
 
             if (!TextUtils.isEmpty(conn.mYdtunTunnelKey)) {
                 cmd.add("--tunnel-key");
@@ -97,7 +97,7 @@ public class YdtunProcess {
             }
 
             VpnStatus.logInfo("ydtun: starting on port " + mLocalPort);
-            VpnStatus.logInfo("ydtun: telemost URLs: " + conn.mYdtunTelemostUrls);
+            VpnStatus.logInfo("ydtun: telemost CC URL: " + conn.mYdtunTelemostCcUrl);
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.environment().put("LD_LIBRARY_PATH", context.getApplicationInfo().nativeLibraryDir);

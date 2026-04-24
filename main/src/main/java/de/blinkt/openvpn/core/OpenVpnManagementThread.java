@@ -411,16 +411,6 @@ public class OpenVpnManagementThread implements Runnable, OpenVPNManagement {
                     if (waittime > 0) Thread.sleep(waittime * 1000L);
                 } catch (InterruptedException e) { return; }
 
-                YdtunProcess ydtun = mOpenVPNService.getYdtunProcess();
-                if (ydtun != null && ydtun.isRunning()) {
-                    VpnStatus.logInfo("ydtun: waiting for KCP tunnel before reconnect...");
-                    if (!ydtun.waitForKcpAlive()) {
-                        VpnStatus.logWarning("ydtun: KCP check failed, releasing hold anyway");
-                    } else {
-                        VpnStatus.logInfo("ydtun: KCP tunnel ready, releasing hold");
-                    }
-                }
-
                 mResumeHandler.post(() -> {
                     if (shouldBeRunning()) releaseHoldCmd();
                 });

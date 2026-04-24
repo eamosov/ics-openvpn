@@ -33,15 +33,15 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/ydtun_telemost_urls"
+                android:hint="@string/ydtun_telemost_cc_url"
                 android:paddingBottom="8dp">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/yd_telemost_urls"
+                    android:id="@+id/yd_telemost_cc_url"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textUri"
-                    android:hint="@string/ydtun_telemost_urls_hint" />
+                    android:hint="@string/ydtun_telemost_cc_url_hint" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout

@@ -687,6 +687,13 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         if (!checkVPNPermission(vp))
             return;
 
+        int profileCheck = vp.checkProfile(this);
+        if (profileCheck != R.string.no_error_found) {
+            VpnStatus.logError(profileCheck);
+            stopSelf(startId);
+            return;
+        }
+
         boolean noReplaceRequested =  (intent != null) && intent.getBooleanExtra(EXTRA_DO_NOT_REPLACE_RUNNING_VPN, false);
 
         // If intent carries fresh connections (from UI process), always allow replacement
@@ -729,8 +736,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         // An old running VPN should now be exited
         mStarting = false;
 
-        // Start tunnel proxy if enabled (sing-box or ydtun, mutually exclusive)
-        // Skip proxy startup if on trusted WiFi — VPN won't connect anyway
+        // Tunnel orchestration is handled by the wrapper binary. Keep local
+        // runtime state empty and let the generated config describe the tunnel.
         mProfile.mSingBoxLocalPort = -1;
         mProfile.mYdtunLocalPort = -1;
         boolean trustedCheck = DeviceStateReceiver.isOnTrustedWifi(this, mProfile);
@@ -738,43 +745,8 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         boolean onTrustedWifi = trustedCheck || standbyCheck;
         VpnStatus.logInfo("Trusted WiFi check: ssid=" + trustedCheck + " standby=" + standbyCheck
                 + " trustedList=" + (mProfile.mTrustedWifiList != null ? mProfile.mTrustedWifiList : "null"));
-        Connection singBoxConn = onTrustedWifi ? null : findSingBoxConnection(mProfile);
-        Connection ydtunConn = onTrustedWifi ? null : findYdtunConnection(mProfile);
         if (onTrustedWifi) {
-            VpnStatus.logInfo("Trusted WiFi detected, skipping proxy tunnel startup");
-        }
-
-        if (singBoxConn != null) {
-            mSingBoxProcess = new SingBoxProcess();
-            int localPort = mSingBoxProcess.start(this, singBoxConn);
-            if (localPort < 0) {
-                VpnStatus.logError("sing-box failed to start, aborting VPN");
-                endVpnService();
-                return;
-            }
-            mProfile.mSingBoxLocalPort = localPort;
-        }
-
-        if (ydtunConn != null) {
-            mYdtunProcess = new YdtunProcess();
-            int localPort = mYdtunProcess.start(this, ydtunConn);
-            if (localPort < 0) {
-                VpnStatus.logError("ydtun failed to start, aborting VPN");
-                endVpnService();
-                return;
-            }
-            mProfile.mYdtunLocalPort = localPort;
-            // For OpenVPN 3: wait for KCP here (no management hold mechanism).
-            // For OpenVPN 2: KCP is also checked in handleHold(), but waiting here
-            // ensures the tunnel is ready before OpenVPN tries to connect.
-            VpnStatus.logInfo("ydtun: waiting for KCP tunnel...");
-            if (!mYdtunProcess.waitForKcpAlive()) {
-                VpnStatus.logError("ydtun: KCP tunnel failed to establish");
-                endVpnService();
-                return;
-            }
-            VpnStatus.logInfo("ydtun: KCP tunnel ready");
-            startYdtunStatusPolling();
+            VpnStatus.logInfo("Trusted WiFi detected, wrapper will receive the original profile unchanged");
         }
 
         // Start a new session by creating a new thread.
@@ -886,12 +858,11 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
     }
 
     public YdtunProcess getYdtunProcess() {
-        return mYdtunProcess;
+        return null;
     }
 
     public boolean isLocalProxyActive() {
-        return (mYdtunProcess != null && mYdtunProcess.isRunning())
-                || (mSingBoxProcess != null && mSingBoxProcess.isRunning());
+        return false;
     }
 
     private void startYdtunStatusPolling() {
@@ -1188,52 +1159,6 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         setHttpProxy(builder, tc);
 
         builder.setConfigureIntent(getGraphPendingIntent());
-
-        // Exclude telemost_net_gateway networks from VPN routing (only when ydtun tunnel is active).
-        // Use mYdtunProcess (set during startCommand) instead of findYdtunConnection(mProfile)
-        // because the profile's connections may have been reloaded by the time openTun is called,
-        // losing the original tunnel type.
-        if (mYdtunProcess != null && mYdtunProcess.isRunning()) {
-            String netGateway = mYdtunProcess.getNetGateway();
-            if (netGateway != null && !netGateway.isEmpty()) {
-                for (String network : netGateway.split(",")) {
-                    network = network.trim();
-                    if (network.isEmpty()) continue;
-                    try {
-                        if (network.contains(":")) {
-                            // IPv6
-                            String[] parts = network.split("/");
-                            java.net.Inet6Address addr = (java.net.Inet6Address) java.net.InetAddress.getByName(parts[0]);
-                            int prefix = parts.length > 1 ? Integer.parseInt(parts[1]) : 128;
-                            builder.excludeRoute(new android.net.IpPrefix(addr, prefix));
-                        } else {
-                            // IPv4
-                            String[] parts = network.split("/");
-                            int prefix = parts.length > 1 ? Integer.parseInt(parts[1]) : 32;
-                            IpAddress route = new IpAddress(new CIDRIP(parts[0], prefix), false);
-                            builder.excludeRoute(route.getPrefix());
-                        }
-                        VpnStatus.logInfo("telemost: excluded route for " + network);
-                    } catch (Exception e) {
-                        VpnStatus.logWarning("telemost: failed to exclude route " + network + ": " + e.getMessage());
-                    }
-                }
-            }
-        }
-
-        // Exclude route for sing-box VLESS server to prevent VPN loop
-        if (mSingBoxProcess != null && mSingBoxProcess.isRunning()) {
-            String serverIp = mSingBoxProcess.getRemoteServerIp();
-            if (serverIp != null) {
-                try {
-                    IpAddress singBoxRoute = new IpAddress(new CIDRIP(serverIp, 32), false);
-                    builder.excludeRoute(singBoxRoute.getPrefix());
-                    VpnStatus.logInfo("sing-box: excluded route for " + serverIp + "/32");
-                } catch (Exception e) {
-                    VpnStatus.logWarning("sing-box: failed to add exclude route: " + e.getMessage());
-                }
-            }
-        }
 
         try {
             //Debug.stopMethodTracing();

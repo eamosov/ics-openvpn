@@ -24,7 +24,7 @@
 
 
         <CheckBoxPreference
-                android:defaultValue="true"
+                android:defaultValue="false"
                 android:disableDependentsState="true"
                 android:key="ovpn3"
                 android:singleLineTitle="false"
