@@ -46,14 +46,17 @@ public class Connection implements Serializable, Cloneable {
 
     // ydtun/Telemost tunnel settings (active when mTunnelType == YDTUN)
     public String mYdtunTelemostCcUrl = "";     // Telemost control channel URL
+    public String mYdtunDisplayName = "";       // Human-readable ydtun participant name
     public String mYdtunTunnelKey = "";          // encryption key (hex or passphrase)
     public boolean mYdtunForceTcpRelay = false;  // force TURN TCP relay instead of UDP
 
     // Log level: 0=info (default), 1=debug (-v), 2=trace (-vv)
     public int mYdtunLogLevel = 0;
 
-    // Networks to exclude from VPN routing when Telemost is active (comma-separated CIDRs)
-    public String mYdtunNetGateway = "";
+    public String mYdtunTunnelId = "";
+    public String mYdtunMaxBw = "";
+    public String mYdtunMaxFrameBudget = "";
+    public String mYdtunMaxFps = "";
 
     public boolean isSingBoxEnabled() { return mTunnelType == TunnelType.SINGBOX; }
     public boolean isYdtunEnabled() { return mTunnelType == TunnelType.YDTUN; }
@@ -112,25 +115,28 @@ public class Connection implements Serializable, Cloneable {
             cfg.append("\n");
         }
 
-        if (isSingBoxEnabled()) {
-            cfg.append("setenv-safe sb_enable true\n");
-            appendWrapperDirective(cfg, "sb_override_address", mSingBoxOverrideAddress);
-            appendWrapperDirective(cfg, "sb_override_port", mSingBoxOverridePort);
-            appendWrapperDirective(cfg, "sb_server_port", mSingBoxServerPort);
-            appendWrapperDirective(cfg, "sb_uuid", mSingBoxUUID);
-            appendWrapperDirective(cfg, "sb_tls_server_name", mSingBoxTlsServerName);
-            appendWrapperDirective(cfg, "sb_tls_public_key", mSingBoxTlsPublicKey);
-            appendWrapperDirective(cfg, "sb_tls_short_id", mSingBoxTlsShortId);
-        } else if (isYdtunEnabled()) {
-            cfg.append("setenv-safe telemost_enable true\n");
-            appendWrapperDirective(cfg, "telemost_cc_url", mYdtunTelemostCcUrl);
-            appendWrapperDirective(cfg, "telemost_tunnel_key", mYdtunTunnelKey);
-            if (mYdtunForceTcpRelay)
-                cfg.append("setenv-safe telemost_force_tcp_relay true\n");
-            if (mYdtunLogLevel > 0)
-                cfg.append(String.format(Locale.US, "setenv-safe telemost_log_level %d\n", mYdtunLogLevel));
-            appendWrapperDirective(cfg, "telemost_net_gateway", mYdtunNetGateway);
-        }
+        // Do not emit sb_enable/telemost_enable here. The wrapper mode is selected by
+        // the launcher via the TUNNELBLICK_CONNECTION_TYPE environment override; any
+        // enable markers already present in the imported/custom config are preserved above.
+        appendWrapperDirective(cfg, "sb_override_address", mSingBoxOverrideAddress);
+        appendWrapperDirective(cfg, "sb_override_port", mSingBoxOverridePort);
+        appendWrapperDirective(cfg, "sb_server_port", mSingBoxServerPort);
+        appendWrapperDirective(cfg, "sb_uuid", mSingBoxUUID);
+        appendWrapperDirective(cfg, "sb_tls_server_name", mSingBoxTlsServerName);
+        appendWrapperDirective(cfg, "sb_tls_public_key", mSingBoxTlsPublicKey);
+        appendWrapperDirective(cfg, "sb_tls_short_id", mSingBoxTlsShortId);
+
+        appendWrapperDirective(cfg, "telemost_cc_url", mYdtunTelemostCcUrl);
+        appendWrapperDirective(cfg, "telemost_display_name", mYdtunDisplayName);
+        appendWrapperDirective(cfg, "telemost_tunnel_key", mYdtunTunnelKey);
+        appendWrapperDirective(cfg, "telemost_tunnel_id", mYdtunTunnelId);
+        appendWrapperDirective(cfg, "telemost_max_bw", mYdtunMaxBw);
+        if (mYdtunForceTcpRelay)
+            cfg.append("setenv-safe telemost_force_tcp_relay true\n");
+        appendWrapperDirective(cfg, "telemost_max_frame_budget", mYdtunMaxFrameBudget);
+        appendWrapperDirective(cfg, "telemost_max_fps", mYdtunMaxFps);
+        if (mYdtunLogLevel > 0)
+            cfg.append(String.format(Locale.US, "setenv-safe telemost_log_level %d\n", mYdtunLogLevel));
 
 
         return cfg.toString();

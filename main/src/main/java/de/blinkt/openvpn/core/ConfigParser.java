@@ -142,9 +142,14 @@ public class ConfigParser {
 
     // ydtun/Telemost tunnel fields
     private String mYdtunTelemostCcUrl = "";
+    private String mYdtunDisplayName = "";
     private String mYdtunTunnelKey = "";
     private boolean mYdtunForceTcpRelay = false;
-    private String mYdtunNetGateway = "";
+    private int mYdtunLogLevel = 0;
+    private String mYdtunTunnelId = "";
+    private String mYdtunMaxBw = "";
+    private String mYdtunMaxFrameBudget = "";
+    private String mYdtunMaxFps = "";
 
     static public void useEmbbedUserAuth(VpnProfile np, String inlinedata) {
         String data = VpnProfile.getEmbeddedContent(inlinedata);
@@ -1061,28 +1066,12 @@ public class ConfigParser {
                 "sb_tls_short_id"
         ));
 
-        // Collect sb_* values from all three formats:
-        // 1) bare: sb_key value (legacy, backward compat)
-        // 2) setenv sb_key value (alternative)
-        // 3) setenv-safe sb_key value (preferred)
-        // Later entries override earlier ones (last wins).
+        // Collect sb_* values from setenv-safe only. Later entries override
+        // earlier ones (last wins).
         Map<String, String> sbValues = new LinkedHashMap<>();
 
-        // 1) Bare format: options["sb_enable"] -> [["sb_enable", "true"]]
-        for (String key : sbKeys) {
-            Vector<Vector<String>> vals = options.get(key);
-            if (vals != null && !vals.isEmpty()) {
-                Vector<String> lastVal = vals.lastElement();
-                sbValues.put(key, lastVal.size() > 1 ? lastVal.get(1) : "");
-                options.remove(key);
-            }
-        }
-
-        // 2-3) setenv / setenv-safe format: options["setenv"] -> [["setenv", "sb_enable", "true"]]
-        for (String wrapper : new String[]{"setenv", "setenv-safe"}) {
-            Vector<Vector<String>> vals = options.get(wrapper);
-            if (vals == null)
-                continue;
+        Vector<Vector<String>> vals = options.get("setenv-safe");
+        if (vals != null) {
             Iterator<Vector<String>> it = vals.iterator();
             while (it.hasNext()) {
                 Vector<String> entry = it.next();
@@ -1094,7 +1083,7 @@ public class ConfigParser {
                 }
             }
             if (vals.isEmpty())
-                options.remove(wrapper);
+                options.remove("setenv-safe");
         }
 
         // Apply collected values
@@ -1151,32 +1140,20 @@ public class ConfigParser {
         Set<String> keys = new LinkedHashSet<>(Arrays.asList(
                 "telemost_enable",
                 "telemost_cc_url",
+                "telemost_display_name",
                 "telemost_tunnel_key",
                 "telemost_tunnel_id",
                 "telemost_max_bw",
                 "telemost_force_tcp_relay",
+                "telemost_log_level",
                 "telemost_max_frame_budget",
-                "telemost_max_fps",
-                "telemost_net_gateway"
+                "telemost_max_fps"
         ));
 
         Map<String, String> values = new LinkedHashMap<>();
 
-        // 1) Bare format
-        for (String key : keys) {
-            Vector<Vector<String>> vals = options.get(key);
-            if (vals != null && !vals.isEmpty()) {
-                Vector<String> lastVal = vals.lastElement();
-                values.put(key, lastVal.size() > 1 ? lastVal.get(1) : "");
-                options.remove(key);
-            }
-        }
-
-        // 2-3) setenv / setenv-safe format
-        for (String wrapper : new String[]{"setenv", "setenv-safe"}) {
-            Vector<Vector<String>> vals = options.get(wrapper);
-            if (vals == null)
-                continue;
+        Vector<Vector<String>> vals = options.get("setenv-safe");
+        if (vals != null) {
             Iterator<Vector<String>> it = vals.iterator();
             while (it.hasNext()) {
                 Vector<String> entry = it.next();
@@ -1188,7 +1165,7 @@ public class ConfigParser {
                 }
             }
             if (vals.isEmpty())
-                options.remove(wrapper);
+                options.remove("setenv-safe");
         }
 
         for (Map.Entry<String, String> e : values.entrySet()) {
@@ -1201,14 +1178,33 @@ public class ConfigParser {
                 case "telemost_cc_url":
                     mYdtunTelemostCcUrl = value;
                     break;
+                case "telemost_display_name":
+                    mYdtunDisplayName = value;
+                    break;
                 case "telemost_tunnel_key":
                     mYdtunTunnelKey = value;
+                    break;
+                case "telemost_tunnel_id":
+                    mYdtunTunnelId = value;
+                    break;
+                case "telemost_max_bw":
+                    mYdtunMaxBw = value;
                     break;
                 case "telemost_force_tcp_relay":
                     mYdtunForceTcpRelay = "true".equalsIgnoreCase(value) || "1".equals(value);
                     break;
-                case "telemost_net_gateway":
-                    mYdtunNetGateway = value;
+                case "telemost_log_level":
+                    try {
+                        mYdtunLogLevel = Integer.parseInt(value);
+                    } catch (NumberFormatException ignored) {
+                        mYdtunLogLevel = 0;
+                    }
+                    break;
+                case "telemost_max_frame_budget":
+                    mYdtunMaxFrameBudget = value;
+                    break;
+                case "telemost_max_fps":
+                    mYdtunMaxFps = value;
                     break;
             }
         }
@@ -1217,16 +1213,29 @@ public class ConfigParser {
     private void applyYdtunToConnections(Connection[] connections) {
         // Always apply telemost fields so they're available when user switches
         // tunnel mode in UI. TunnelType is set separately.
-        boolean hasYdtunFields = !mYdtunTelemostCcUrl.isEmpty() || !mYdtunTunnelKey.isEmpty();
+        boolean hasYdtunFields = !mYdtunTelemostCcUrl.isEmpty()
+                || !mYdtunDisplayName.isEmpty()
+                || !mYdtunTunnelKey.isEmpty()
+                || !mYdtunTunnelId.isEmpty()
+                || !mYdtunMaxBw.isEmpty()
+                || mYdtunForceTcpRelay
+                || mYdtunLogLevel > 0
+                || !mYdtunMaxFrameBudget.isEmpty()
+                || !mYdtunMaxFps.isEmpty();
         if (!hasYdtunFields && mTunnelType != Connection.TunnelType.YDTUN)
             return;
         for (Connection conn : connections) {
             if (mTunnelType == Connection.TunnelType.YDTUN)
                 conn.mTunnelType = Connection.TunnelType.YDTUN;
             conn.mYdtunTelemostCcUrl = mYdtunTelemostCcUrl;
+            conn.mYdtunDisplayName = mYdtunDisplayName;
             conn.mYdtunTunnelKey = mYdtunTunnelKey;
+            conn.mYdtunTunnelId = mYdtunTunnelId;
+            conn.mYdtunMaxBw = mYdtunMaxBw;
             conn.mYdtunForceTcpRelay = mYdtunForceTcpRelay;
-            conn.mYdtunNetGateway = mYdtunNetGateway;
+            conn.mYdtunLogLevel = mYdtunLogLevel;
+            conn.mYdtunMaxFrameBudget = mYdtunMaxFrameBudget;
+            conn.mYdtunMaxFps = mYdtunMaxFps;
         }
     }
 
@@ -1344,6 +1353,3 @@ public class ConfigParser {
     }
 
 }
-
-
-

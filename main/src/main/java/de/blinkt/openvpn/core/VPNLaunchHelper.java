@@ -48,7 +48,7 @@ public class VPNLaunchHelper {
     }
 
 
-    static String[] buildOpenvpnArgv(Context c) {
+    static String[] buildOpenvpnArgv(Context c, VpnProfile profile) {
         Vector<String> args = new Vector<>();
 
         String binaryName = writeMiniVPN(c);
@@ -57,10 +57,29 @@ public class VPNLaunchHelper {
 
         args.add(binaryName);
 
+        args.add("--setenv");
+        args.add("TUNNELBLICK_CONNECTION_TYPE");
+        args.add(getTunnelblickConnectionType(profile));
+
         args.add("--config");
         args.add("stdin");
 
         return args.toArray(new String[0]);
+    }
+
+    private static String getTunnelblickConnectionType(VpnProfile profile) {
+        if (profile != null && profile.mConnections != null) {
+            for (Connection conn : profile.mConnections) {
+                if (!conn.mEnabled)
+                    continue;
+                if (conn.mTunnelType == Connection.TunnelType.SINGBOX)
+                    return "singbox";
+                if (conn.mTunnelType == Connection.TunnelType.YDTUN)
+                    return "telemost";
+                break;
+            }
+        }
+        return "direct";
     }
 
     private static boolean writeMiniVPNBinary(Context context, String abi, File mvpnout) {

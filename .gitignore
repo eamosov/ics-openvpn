@@ -31,3 +31,4 @@ idir
 
 test.local.conf
 .kotlin
+release-key.jks

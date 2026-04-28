@@ -856,6 +856,7 @@ public class VpnProfile implements Serializable, Cloneable {
     }
 
     public static final String EXTRA_CONNECTIONS = "de.blinkt.openvpn.EXTRA_CONNECTIONS";
+    public static final String EXTRA_PROFILE = "de.blinkt.openvpn.EXTRA_PROFILE";
 
     public Intent getStartServiceIntent(Context context, String startReason, boolean replace_running_vpn) {
         Intent intent = new Intent(context, OpenVPNService.class);
@@ -868,6 +869,9 @@ public class VpnProfile implements Serializable, Cloneable {
         // Pass serialized connections to cross user-boundary (work profile)
         if (mConnections != null) {
             intent.putExtra(EXTRA_CONNECTIONS, mConnections);
+        }
+        if (mTemporaryProfile) {
+            intent.putExtra(EXTRA_PROFILE, this);
         }
         return intent;
     }
@@ -1433,6 +1437,5 @@ public class VpnProfile implements Serializable, Cloneable {
         }
     }
 }
-
 
 

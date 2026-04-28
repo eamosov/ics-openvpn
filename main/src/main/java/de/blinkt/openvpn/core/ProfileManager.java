@@ -323,13 +323,21 @@ public class ProfileManager {
             FileInputStream vpInput;
             File encryptedPath = context.getFileStreamPath(vpnentry + ".cp");
             File encryptedPathOld = context.getFileStreamPath(vpnentry + ".cpold");
+            File plainPath = context.getFileStreamPath(vpnentry + ".vp");
+
+            if (TEMPORARY_PROFILE_FILENAME.equals(vpnentry)
+                    && !encryptedPath.exists()
+                    && !encryptedPathOld.exists()
+                    && !plainPath.exists()) {
+                return;
+            }
 
             if (encryptedPath.exists()) {
                 vpInput = ProfileEncryption.getEncryptedVpInput(context, encryptedPath);
             } else if (encryptedPathOld.exists()) {
                 vpInput = ProfileEncryption.getEncryptedVpInput(context, encryptedPathOld);
             } else {
-                vpInput = context.openFileInput(vpnentry + ".vp");
+                vpInput = context.openFileInput(plainPath.getName());
             }
             vpnfile = new ObjectInputStream(vpInput);
             VpnProfile vp = ((VpnProfile) vpnfile.readObject());

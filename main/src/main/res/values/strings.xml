@@ -320,18 +320,26 @@
     <string name="ydtun_summary">Route OpenVPN traffic through WebRTC/Telemost tunnel</string>
     <string name="ydtun_telemost_cc_url">Telemost CC URL</string>
     <string name="ydtun_telemost_cc_url_hint">Control channel URL</string>
+    <string name="ydtun_display_name">Display Name</string>
+    <string name="ydtun_display_name_hint">Participant display name</string>
     <string name="ydtun_tunnel_key">Tunnel Key</string>
     <string name="ydtun_tunnel_key_hint">Encryption key (hex or passphrase)</string>
+    <string name="ydtun_tunnel_id">Tunnel ID</string>
+    <string name="ydtun_tunnel_id_hint">Optional tunnel identifier</string>
+    <string name="ydtun_max_bw">Max Bandwidth</string>
+    <string name="ydtun_max_bw_hint">Optional bandwidth limit</string>
     <string name="ydtun_force_tcp_relay">Force TCP relay</string>
     <string name="ydtun_force_tcp_relay_summary">Use TURN TCP relay instead of UDP</string>
+    <string name="ydtun_max_frame_budget">Max Frame Budget</string>
+    <string name="ydtun_max_frame_budget_hint">Optional WebRTC frame budget</string>
+    <string name="ydtun_max_fps">Max FPS</string>
+    <string name="ydtun_max_fps_hint">Optional WebRTC FPS limit</string>
     <string name="ydtun_log_level">Log Level</string>
     <string-array name="ydtun_log_levels">
         <item>Info (default)</item>
         <item>Debug</item>
         <item>Trace</item>
     </string-array>
-    <string name="ydtun_net_gateway">Exclude networks from VPN</string>
-    <string name="ydtun_net_gateway_hint">CIDRs, comma-separated (e.g. 10.0.0.0/8,192.168.1.0/24)</string>
     <string name="device_specific">Device specifics Hacks</string>
     <string name="cannotparsecert">Cannot display certificate information</string>
     <string name="appbehaviour">Application behaviour</string>

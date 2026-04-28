@@ -600,8 +600,26 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
             startReason = intent.getStringExtra(EXTRA_START_REASON);
             if (startReason == null)
                 startReason = "(unknown)";
-            // Try for 10s to get current version of the profile
-            vpnProfile = ProfileManager.get(this, profileUUID, profileVersion, 100);
+            VpnProfile intentProfile = null;
+            if (intent.hasExtra(VpnProfile.EXTRA_PROFILE)) {
+                try {
+                    VpnProfile candidate = (VpnProfile) intent.getSerializableExtra(VpnProfile.EXTRA_PROFILE);
+                    if (candidate != null && profileUUID.equals(candidate.getUUIDString()))
+                        intentProfile = candidate;
+                } catch (Exception e) {
+                    Log.w("OpenVPN", "fetchVPNProfile: failed to deserialize profile from intent", e);
+                }
+            }
+
+            // Try for 10s to get current version of persisted profiles. Temporary
+            // profiles may only exist in the launching process, so use the
+            // serialized intent profile immediately if the local store misses it.
+            vpnProfile = ProfileManager.get(this, profileUUID, profileVersion, intentProfile != null ? 0 : 100);
+            if ((vpnProfile == null || vpnProfile.mVersion < profileVersion) && intentProfile != null) {
+                vpnProfile = intentProfile;
+                if (vpnProfile.mTemporaryProfile)
+                    ProfileManager.setTemporaryProfile(this, vpnProfile);
+            }
             // Apply connections from intent — needed when VPN service runs in a different
             // Android user (e.g. Samsung Secure Folder user 151) that has a stale profile copy.
             // The intent crosses user boundary via IPC, carrying the fresh connections from user 0.
@@ -726,7 +744,7 @@ public class OpenVPNService extends VpnService implements StateListener, Callbac
         }
 
         // Write OpenVPN binary
-        String[] argv = VPNLaunchHelper.buildOpenvpnArgv(this);
+        String[] argv = VPNLaunchHelper.buildOpenvpnArgv(this, mProfile);
 
 
         // Set a flag that we are starting a new VPN
