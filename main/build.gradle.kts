@@ -226,9 +226,6 @@ android.applicationVariants.all(object : Action<ApplicationVariant> {
 
 val ndkDir = android.ndkDirectory
 val openVpnAbi = "arm64-v8a"
-val openVpnSrcDir = file("src/main/cpp/openvpn")
-val openVpnRawOutputDir = file("${buildDir}/openvpn/artifacts")
-val openVpnRawAbiOutputDir = file("${openVpnRawOutputDir}/${openVpnAbi}")
 val openVpnJniLibsDir = file("${buildDir}/openvpn/jniLibs")
 val openVpnJniLibsAbiDir = file("${openVpnJniLibsDir}/${openVpnAbi}")
 val openVpnAssetDir = file("${buildDir}/ovpnassets")
@@ -247,52 +244,56 @@ val openVpnAndroidArtifacts = openVpnNativeLibraries + listOf(
 
 val buildOpenVpnAndroid = tasks.register<Exec>("buildOpenVpnAndroid") {
     description = "Build OpenVPN Android artifacts for arm64-v8a"
-    workingDir = openVpnSrcDir
-    commandLine(
-        "bash",
-        file("${openVpnSrcDir}/build.sh").absolutePath,
-        "android",
-        "--abi", openVpnAbi,
-        "--ndk", ndkDir.absolutePath,
-        "--out-dir", openVpnRawOutputDir.absolutePath
-    )
 
     doFirst {
-        mkdir(openVpnRawAbiOutputDir)
         mkdir(openVpnJniLibsAbiDir)
         mkdir(openVpnAssetDir)
+        val nekroVpnPath = providers.environmentVariable("NEKROVPN_PATH").orNull
+            ?: throw GradleException("NEKROVPN_PATH is required. Set it to the nekrovpn checkout, for example /Users/fluder/git/nekrovpn.")
+        val nekroVpnDir = file(nekroVpnPath)
+        val nekroVpnBuildScript = file("${nekroVpnDir}/build.sh")
+        if (!nekroVpnBuildScript.isFile) {
+            throw GradleException("NEKROVPN_PATH does not point to a nekrovpn checkout with build.sh: ${nekroVpnDir}")
+        }
+
+        workingDir = nekroVpnDir
+        commandLine(
+            "./build.sh",
+            "android",
+            "--abi", openVpnAbi,
+            "--api", "21",
+            "--ndk", ndkDir.absolutePath
+        )
     }
 
     doLast {
+        val nekroVpnPath = providers.environmentVariable("NEKROVPN_PATH").orNull
+            ?: throw GradleException("NEKROVPN_PATH is required. Set it to the nekrovpn checkout, for example /Users/fluder/git/nekrovpn.")
+        val nekroVpnDir = file(nekroVpnPath)
+        val nekroVpnArtifactsDir = file("${nekroVpnDir}/target/android/${openVpnAbi}")
+        val missingArtifacts = openVpnAndroidArtifacts
+            .map { file("${nekroVpnArtifactsDir}/${it}") }
+            .filterNot { it.isFile }
+        if (missingArtifacts.isNotEmpty()) {
+            throw GradleException(
+                "nekrovpn did not produce required Android artifacts in ${nekroVpnArtifactsDir}:\n" +
+                    missingArtifacts.joinToString(separator = "\n") { "  ${it.name}" }
+            )
+        }
+
         copy {
-            from(openVpnNativeLibraries.map { file("${openVpnRawAbiOutputDir}/${it}") })
+            from(openVpnNativeLibraries.map { file("${nekroVpnArtifactsDir}/${it}") })
             into(openVpnJniLibsAbiDir)
         }
         copy {
-            from(file("${openVpnRawAbiOutputDir}/pie_openvpn.${openVpnAbi}"))
+            from(file("${nekroVpnArtifactsDir}/pie_openvpn.${openVpnAbi}"))
             into(openVpnAssetDir)
         }
     }
 
-    inputs.file(file("${openVpnSrcDir}/build.sh"))
-    inputs.file(file("${openVpnSrcDir}/scripts/build-android.sh"))
-    outputs.files(openVpnAndroidArtifacts.map { file("${openVpnRawAbiOutputDir}/${it}") })
     outputs.files(openVpnNativeLibraries.map { file("${openVpnJniLibsAbiDir}/${it}") })
     outputs.file(openVpnExecutableAsset)
     outputs.upToDateWhen { false }
-}
-
-tasks.register<Exec>("resetOpenVpnAndroidVendorOpenvpn") {
-    description = "Reset build-time OpenVPN vendor patching"
-    commandLine(
-        "git",
-        "-C", openVpnSrcDir.absolutePath,
-        "submodule", "update", "--init", "--force", "vendor/openvpn"
-    )
-}
-
-buildOpenVpnAndroid.configure {
-    finalizedBy("resetOpenVpnAndroidVendorOpenvpn")
 }
 
 afterEvaluate {
